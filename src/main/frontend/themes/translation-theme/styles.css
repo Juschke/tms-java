@@ -130,8 +130,7 @@ body, html {
 }
 
 /* Remove Vaadin's default outer padding on the full-screen layout */
-vaadin-app-layout::part(drawer),
-vaadin-app-layout::part(navbar) {
+vaadin-app-layout::part(drawer) {
   background: var(--app-toolbar-bg);
 }
 
@@ -140,8 +139,8 @@ vaadin-app-layout::part(navbar) {
    ================================================================ */
 vaadin-app-layout vaadin-side-nav,
 vaadin-app-layout vaadin-tabs[slot="drawer"] {
-  background:  #2b3a4a;
-  color:       #d0d8e0;
+  background:  var(--app-toolbar-bg);
+  color:       var(--lumo-body-text-color);
 }
 
 /* Sidebar nav items */
@@ -149,14 +148,19 @@ vaadin-side-nav-item::part(item) {
   font-size:   var(--lumo-font-size-s);
   min-height:  28px;
   padding:     0 var(--lumo-space-m);
-  color:       #c8d4de;
+  color:       var(--lumo-secondary-text-color);
   border-radius: 0;
 }
 
-vaadin-side-nav-item[active]::part(item),
+vaadin-side-nav-item[active]::part(item) {
+  background:  var(--app-grid-header-bg);
+  color:       var(--lumo-primary-text-color);
+  font-weight: 600;
+}
+
 vaadin-side-nav-item::part(item):hover {
-  background:  rgba(255,255,255,0.12);
-  color:       #ffffff;
+  background:  var(--lumo-contrast-5pct);
+  color:       var(--lumo-primary-text-color);
 }
 
 /* ================================================================
@@ -651,10 +655,21 @@ vaadin-app-layout {
 }
 
 vaadin-app-layout::part(navbar) {
-  background:    #2b3a4a;
-  border-bottom: 1px solid #1a2a38;
+  background:    var(--app-toolbar-bg);
+  border-bottom: 1px solid var(--app-toolbar-border);
   min-height:    36px;
   padding:       0 var(--lumo-space-m);
+}
+
+/* Styling elements inside the header to be dark for high contrast on light gray */
+vaadin-app-layout::part(navbar) h1,
+vaadin-app-layout::part(navbar) span,
+vaadin-app-layout::part(navbar) vaadin-button {
+  color: var(--lumo-body-text-color) !important;
+}
+
+vaadin-app-layout::part(navbar) vaadin-drawer-toggle {
+  color: var(--lumo-body-text-color) !important;
 }
 
 /* Main content area */
