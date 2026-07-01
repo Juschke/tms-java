@@ -14,23 +14,25 @@ public interface QuoteRepository extends JpaRepository<Quote, UUID> {
     Optional<Quote> findByQuoteNumber(String quoteNumber);
 
     @org.springframework.data.jpa.repository.Query(value = "SELECT q FROM Quote q " +
-            "LEFT JOIN FETCH q.customer " +
-            "LEFT JOIN FETCH q.inquiry " +
+            "LEFT JOIN FETCH q.customer c " +
+            "LEFT JOIN FETCH q.inquiry i " +
             "WHERE q.tenant.id = :tenantId AND q.deletedAt IS NULL " +
             "AND (:search IS NULL OR :search = '' OR " +
             "     LOWER(q.quoteNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "     LOWER(q.customer.companyName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "     LOWER(c.companyName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:quoteNumber IS NULL OR :quoteNumber = '' OR LOWER(q.quoteNumber) LIKE LOWER(CONCAT('%', :quoteNumber, '%'))) " +
-            "AND (:customerName IS NULL OR :customerName = '' OR LOWER(q.customer.companyName) LIKE LOWER(CONCAT('%', :customerName, '%'))) " +
+            "AND (:customerName IS NULL OR :customerName = '' OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', :customerName, '%'))) " +
             "AND (:status IS NULL OR q.status = :status) " +
             "AND (:minAmount IS NULL OR q.grossAmount >= :minAmount) " +
             "AND (:maxAmount IS NULL OR q.grossAmount <= :maxAmount)",
-            countQuery = "SELECT count(q) FROM Quote q WHERE q.tenant.id = :tenantId AND q.deletedAt IS NULL " +
+            countQuery = "SELECT count(q) FROM Quote q " +
+            "LEFT JOIN q.customer c " +
+            "WHERE q.tenant.id = :tenantId AND q.deletedAt IS NULL " +
             "AND (:search IS NULL OR :search = '' OR " +
             "     LOWER(q.quoteNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "     LOWER(q.customer.companyName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "     LOWER(c.companyName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:quoteNumber IS NULL OR :quoteNumber = '' OR LOWER(q.quoteNumber) LIKE LOWER(CONCAT('%', :quoteNumber, '%'))) " +
-            "AND (:customerName IS NULL OR :customerName = '' OR LOWER(q.customer.companyName) LIKE LOWER(CONCAT('%', :customerName, '%'))) " +
+            "AND (:customerName IS NULL OR :customerName = '' OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', :customerName, '%'))) " +
             "AND (:status IS NULL OR q.status = :status) " +
             "AND (:minAmount IS NULL OR q.grossAmount >= :minAmount) " +
             "AND (:maxAmount IS NULL OR q.grossAmount <= :maxAmount)")
