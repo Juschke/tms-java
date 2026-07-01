@@ -145,8 +145,9 @@ vaadin-app-layout vaadin-tabs[slot="drawer"] {
 
 /* Sidebar nav items */
 vaadin-side-nav-item::part(item) {
-  font-size:   var(--lumo-font-size-s);
-  min-height:  28px;
+  font-size:   14px; /* Larger font size as requested */
+  font-weight: 500;
+  min-height:  32px;
   padding:     0 var(--lumo-space-m);
   color:       var(--lumo-secondary-text-color);
   border-radius: 0;
@@ -161,6 +162,48 @@ vaadin-side-nav-item[active]::part(item) {
 vaadin-side-nav-item::part(item):hover {
   background:  var(--lumo-contrast-5pct);
   color:       var(--lumo-primary-text-color);
+}
+
+/* Responsive mini-sidebar layout for desktop and laptop */
+@media (min-width: 801px) {
+  /* Width variables when expanded/collapsed */
+  vaadin-app-layout[drawer-opened] {
+    --vaadin-app-layout-drawer-width: 220px;
+  }
+  vaadin-app-layout:not([drawer-opened]) {
+    --vaadin-app-layout-drawer-width: 60px;
+  }
+
+  /* Force the drawer to remain visible and collapse to 60px when drawer-opened is false */
+  vaadin-app-layout:not([drawer-opened])::part(drawer) {
+    transform: none !important;
+    visibility: visible !important;
+    width: 60px !important;
+    transition: width 0.15s ease-in-out;
+  }
+
+  /* Shift the content panel accordingly */
+  vaadin-app-layout:not([drawer-opened])::part(content) {
+    padding-left: 60px !important;
+    transition: padding-left 0.15s ease-in-out;
+  }
+
+  /* Hide the text labels when collapsed */
+  vaadin-app-layout:not([drawer-opened]) vaadin-side-nav-item {
+    font-size: 0 !important;
+  }
+
+  /* Center the icons horizontally in the 60px sidebar */
+  vaadin-app-layout:not([drawer-opened]) vaadin-side-nav-item::part(link) {
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+
+  /* Style and align prefix icons */
+  vaadin-app-layout:not([drawer-opened]) vaadin-side-nav-item [slot="prefix"] {
+    font-size: 18px !important;
+    margin: 0 !important;
+  }
 }
 
 /* ================================================================
@@ -658,7 +701,15 @@ vaadin-app-layout::part(navbar) {
   background:    var(--app-toolbar-bg);
   border-bottom: 1px solid var(--app-toolbar-border);
   min-height:    36px;
-  padding:       0 var(--lumo-space-m);
+  padding:       0 8px !important; /* Set layout left-padding to 8px */
+}
+
+/* Center the drawer toggle hamburger button precisely at 30px horizontal offset */
+vaadin-app-layout vaadin-drawer-toggle {
+  width: 44px !important;
+  height: 32px !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* Styling elements inside the header to be dark for high contrast on light gray */
