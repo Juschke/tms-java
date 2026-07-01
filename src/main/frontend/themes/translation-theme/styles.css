@@ -172,6 +172,7 @@ vaadin-side-nav-item::part(item):hover {
   }
   vaadin-app-layout:not([drawer-opened]) {
     --vaadin-app-layout-drawer-width: 60px;
+    --vaadin-app-layout-drawer-offset-left: 60px !important;
   }
 
   /* Force the drawer to remain visible and collapse to 60px when drawer-opened is false */
@@ -182,10 +183,12 @@ vaadin-side-nav-item::part(item):hover {
     transition: width 0.15s ease-in-out;
   }
 
-  /* Shift the content panel accordingly */
+  /* Shift the content panel accordingly and restrict width to prevent overflow/overlap */
   vaadin-app-layout:not([drawer-opened])::part(content) {
-    padding-left: 60px !important;
-    transition: padding-left 0.15s ease-in-out;
+    margin-left: 60px !important;
+    width: calc(100% - 60px) !important;
+    box-sizing: border-box !important;
+    transition: margin-left 0.15s ease-in-out, width 0.15s ease-in-out;
   }
 
   /* Hide the text labels when collapsed */
