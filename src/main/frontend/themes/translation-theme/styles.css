@@ -1,0 +1,663 @@
+/* ================================================================
+   translation-theme / styles.css
+   Classic Enterprise Desktop Theme
+   Inspired by professional TMS applications (SDL Trados / Across style)
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   GOOGLE FONT – Inter (closest to Segoe UI on all platforms)
+   ---------------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+/* ================================================================
+   1. LUMO DESIGN TOKENS – Override the entire Lumo palette
+   ================================================================ */
+:root {
+  /* ---- Typography ---- */
+  --lumo-font-family: 'Inter', 'Segoe UI', 'Liberation Sans', Arial, sans-serif;
+  --lumo-font-size-xxs: 10px;
+  --lumo-font-size-xs:  11px;
+  --lumo-font-size-s:   12px;
+  --lumo-font-size-m:   12px;
+  --lumo-font-size-l:   13px;
+  --lumo-font-size-xl:  14px;
+  --lumo-font-size-xxl: 16px;
+
+  /* ---- Component Heights (very compact) ---- */
+  --lumo-size-xs:  18px;
+  --lumo-size-s:   24px;
+  --lumo-size-m:   28px;
+  --lumo-size-l:   32px;
+  --lumo-size-xl:  36px;
+
+  /* ---- Spacing (dense) ---- */
+  --lumo-space-xs: 2px;
+  --lumo-space-s:  4px;
+  --lumo-space-m:  8px;
+  --lumo-space-l:  12px;
+  --lumo-space-xl: 16px;
+
+  /* ---- Border Radius (nearly square – classic Windows look) ---- */
+  --lumo-border-radius-s:  2px;
+  --lumo-border-radius-m:  2px;
+  --lumo-border-radius-l:  3px;
+
+  /* ---- Base Colors ---- */
+  --lumo-base-color:             #f0f0ef;
+  --lumo-tint-5pct:              hsla(0, 0%, 100%, 0.3);
+  --lumo-tint-10pct:             hsla(0, 0%, 100%, 0.5);
+  --lumo-tint-20pct:             hsla(0, 0%, 100%, 0.6);
+  --lumo-tint-30pct:             hsla(0, 0%, 100%, 0.7);
+  --lumo-tint-40pct:             hsla(0, 0%, 100%, 0.8);
+  --lumo-tint-50pct:             hsla(0, 0%, 100%, 0.9);
+  --lumo-tint:                   #ffffff;
+
+  /* ---- Shade / Contrast ---- */
+  --lumo-shade-5pct:             hsla(214, 10%, 30%, 0.05);
+  --lumo-shade-10pct:            hsla(214, 10%, 30%, 0.10);
+  --lumo-shade-20pct:            hsla(214, 10%, 30%, 0.18);
+  --lumo-shade-30pct:            hsla(214, 10%, 30%, 0.26);
+  --lumo-shade-40pct:            hsla(214, 10%, 30%, 0.38);
+  --lumo-shade-50pct:            hsla(214, 10%, 30%, 0.50);
+  --lumo-shade:                  hsl(214, 10%, 25%);
+
+  --lumo-contrast-5pct:          #e8e8e7;
+  --lumo-contrast-10pct:         #d5d5d4;
+  --lumo-contrast-20pct:         #c0c0be;
+  --lumo-contrast-30pct:         #aaaaaa;
+  --lumo-contrast-40pct:         #909090;
+  --lumo-contrast-50pct:         #787878;
+  --lumo-contrast-60pct:         #606060;
+  --lumo-contrast-70pct:         #4a4a4a;
+  --lumo-contrast-80pct:         #353535;
+  --lumo-contrast-90pct:         #222222;
+  --lumo-contrast:               #111111;
+
+  /* ---- Text Colors ---- */
+  --lumo-header-text-color:        #1c2d3d;
+  --lumo-body-text-color:          #222222;
+  --lumo-secondary-text-color:     #555555;
+  --lumo-tertiary-text-color:      #888888;
+  --lumo-disabled-text-color:      #aaaaaa;
+
+  /* ---- Primary (Windows Enterprise Blue) ---- */
+  --lumo-primary-color:            #1a6fad;
+  --lumo-primary-color-50pct:      rgba(26, 111, 173, 0.5);
+  --lumo-primary-color-10pct:      rgba(26, 111, 173, 0.10);
+  --lumo-primary-text-color:       #1a6fad;
+  --lumo-primary-contrast-color:   #ffffff;
+
+  /* ---- Error ---- */
+  --lumo-error-color:            #cc0000;
+  --lumo-error-color-50pct:      rgba(204, 0, 0, 0.5);
+  --lumo-error-color-10pct:      rgba(204, 0, 0, 0.1);
+  --lumo-error-text-color:       #cc0000;
+  --lumo-error-contrast-color:   #ffffff;
+
+  /* ---- Success ---- */
+  --lumo-success-color:          #2e7d32;
+  --lumo-success-color-50pct:    rgba(46, 125, 50, 0.5);
+  --lumo-success-color-10pct:    rgba(46, 125, 50, 0.1);
+  --lumo-success-text-color:     #2e7d32;
+  --lumo-success-contrast-color: #ffffff;
+
+  /* ---- Custom App Variables ---- */
+  --app-toolbar-bg:          #e4e4e3;
+  --app-toolbar-border:      #b8b8b8;
+  --app-panel-bg:            #ffffff;
+  --app-panel-border:        #c0c0be;
+  --app-section-line:        #1a6fad;
+  --app-grid-header-bg:      #dde4ed;
+  --app-grid-row-alt:        #f5f8fc;
+  --app-grid-selected:       #c3d8f0;
+  --app-grid-selected-text:  #0a2e52;
+  --app-tab-active:          #1a6fad;
+  --app-input-border:        #a0a0a0;
+  --app-input-bg:            #ffffff;
+  --app-disabled-bg:         #e8e8e7;
+}
+
+/* ================================================================
+   2. GLOBAL BASE STYLES
+   ================================================================ */
+body, html {
+  font-family:   var(--lumo-font-family);
+  font-size:     var(--lumo-font-size-m);
+  color:         var(--lumo-body-text-color);
+  background:    var(--lumo-base-color);
+  margin:        0;
+  padding:       0;
+}
+
+/* Remove Vaadin's default outer padding on the full-screen layout */
+vaadin-app-layout::part(drawer),
+vaadin-app-layout::part(navbar) {
+  background: var(--app-toolbar-bg);
+}
+
+/* ================================================================
+   3. NAVIGATION / SIDE DRAWER
+   ================================================================ */
+vaadin-app-layout vaadin-side-nav,
+vaadin-app-layout vaadin-tabs[slot="drawer"] {
+  background:  #2b3a4a;
+  color:       #d0d8e0;
+}
+
+/* Sidebar nav items */
+vaadin-side-nav-item::part(item) {
+  font-size:   var(--lumo-font-size-s);
+  min-height:  28px;
+  padding:     0 var(--lumo-space-m);
+  color:       #c8d4de;
+  border-radius: 0;
+}
+
+vaadin-side-nav-item[active]::part(item),
+vaadin-side-nav-item::part(item):hover {
+  background:  rgba(255,255,255,0.12);
+  color:       #ffffff;
+}
+
+/* ================================================================
+   4. VIEWS – Main content area
+   ================================================================ */
+.view-container,
+.main-content {
+  background: var(--lumo-base-color);
+  padding:    var(--lumo-space-m);
+}
+
+/* ================================================================
+   5. BUTTONS
+   Classic flat Windows-style: gray background, border, hover darker
+   ================================================================ */
+vaadin-button {
+  font-family:   var(--lumo-font-family) !important;
+  font-size:     var(--lumo-font-size-s) !important;
+  border-radius: var(--lumo-border-radius-s) !important;
+  min-width:     auto;
+  height:        var(--lumo-size-s);
+  cursor:        pointer;
+}
+
+/* Default button – classic gray */
+vaadin-button::part(label) {
+  padding:     0 var(--lumo-space-m);
+  font-size:   var(--lumo-font-size-s);
+  font-weight: 400;
+}
+
+vaadin-button:not([theme])::part(button),
+vaadin-button[theme~="secondary"]::part(button) {
+  background:    var(--app-toolbar-bg);
+  border:        1px solid var(--app-toolbar-border);
+  border-bottom: 1px solid #999;
+  color:         var(--lumo-body-text-color);
+  box-shadow:    none;
+}
+
+vaadin-button:not([theme]):hover::part(button),
+vaadin-button[theme~="secondary"]:hover::part(button) {
+  background: #d8d8d7;
+}
+
+/* Primary button – blue */
+vaadin-button[theme~="primary"]::part(button) {
+  background:  #1a6fad;
+  border:      1px solid #155a8a;
+  color:       #ffffff;
+  box-shadow:  none;
+}
+
+vaadin-button[theme~="primary"]:hover::part(button) {
+  background:  #155a8a;
+}
+
+/* Error / Danger button */
+vaadin-button[theme~="error"]::part(button) {
+  background:  #cc0000;
+  border:      1px solid #aa0000;
+  color:       #ffffff;
+}
+
+/* Tertiary / icon-only buttons */
+vaadin-button[theme~="tertiary"]::part(button),
+vaadin-button[theme~="tertiary"][theme~="icon"]::part(button) {
+  background:  transparent;
+  border:      1px solid transparent;
+  color:       var(--lumo-secondary-text-color);
+  box-shadow:  none;
+}
+
+vaadin-button[theme~="tertiary"]:hover::part(button) {
+  background:  var(--app-toolbar-bg);
+  border-color: var(--app-toolbar-border);
+}
+
+/* Small buttons */
+vaadin-button[theme~="small"]::part(button) {
+  height:     var(--lumo-size-xs);
+  min-width:  auto;
+}
+
+/* ================================================================
+   6. TEXT FIELDS, COMBO BOXES, DATE PICKERS
+   Classic input: white bg, gray border, compact
+   ================================================================ */
+vaadin-text-field,
+vaadin-email-field,
+vaadin-number-field,
+vaadin-integer-field,
+vaadin-password-field,
+vaadin-combo-box,
+vaadin-select,
+vaadin-date-picker,
+vaadin-text-area {
+  font-size: var(--lumo-font-size-s) !important;
+}
+
+vaadin-text-field::part(input-field),
+vaadin-email-field::part(input-field),
+vaadin-number-field::part(input-field),
+vaadin-integer-field::part(input-field),
+vaadin-password-field::part(input-field),
+vaadin-combo-box::part(input-field),
+vaadin-select::part(input-field),
+vaadin-date-picker::part(input-field),
+vaadin-text-area::part(input-field) {
+  background:    var(--app-input-bg);
+  border:        1px solid var(--app-input-border);
+  border-radius: var(--lumo-border-radius-s);
+  min-height:    var(--lumo-size-s);
+  padding:       0 var(--lumo-space-s);
+  font-size:     var(--lumo-font-size-s);
+  box-shadow:    inset 0 1px 2px rgba(0,0,0,0.06);
+  transition:    border-color 0.15s ease;
+}
+
+vaadin-text-field::part(input-field):focus-within,
+vaadin-combo-box::part(input-field):focus-within,
+vaadin-select::part(input-field):focus-within,
+vaadin-date-picker::part(input-field):focus-within {
+  border-color: var(--lumo-primary-color);
+  box-shadow:   inset 0 1px 2px rgba(0,0,0,0.06),
+                0 0 0 1px var(--lumo-primary-color-50pct);
+}
+
+/* Disabled inputs – gray out */
+vaadin-text-field[disabled]::part(input-field),
+vaadin-combo-box[disabled]::part(input-field),
+vaadin-date-picker[disabled]::part(input-field) {
+  background: var(--app-disabled-bg);
+  border-color: var(--app-panel-border);
+  color:       var(--lumo-disabled-text-color);
+}
+
+/* Labels */
+vaadin-text-field::part(label),
+vaadin-combo-box::part(label),
+vaadin-date-picker::part(label),
+vaadin-checkbox::part(label) {
+  font-size:   var(--lumo-font-size-xs);
+  font-weight: 400;
+  color:       var(--lumo-secondary-text-color);
+  padding-bottom: 1px;
+}
+
+/* ================================================================
+   7. CHECKBOXES
+   Classic Windows-style square checkboxes
+   ================================================================ */
+vaadin-checkbox::part(checkbox) {
+  width:         13px;
+  height:        13px;
+  border:        1px solid var(--app-input-border);
+  border-radius: 1px;
+  background:    var(--app-input-bg);
+  margin-right:  var(--lumo-space-xs);
+}
+
+vaadin-checkbox[checked]::part(checkbox) {
+  background:  var(--lumo-primary-color);
+  border-color: var(--lumo-primary-color);
+}
+
+/* ================================================================
+   8. GRID – Compact, classic enterprise list style
+   ================================================================ */
+vaadin-grid {
+  font-size:     var(--lumo-font-size-s);
+  font-family:   var(--lumo-font-family);
+  border:        1px solid var(--app-panel-border);
+  border-radius: var(--lumo-border-radius-s);
+  background:    var(--app-panel-bg);
+}
+
+/* Column header row */
+vaadin-grid::part(header-cell) {
+  background:   var(--app-grid-header-bg);
+  border-bottom: 2px solid var(--app-section-line);
+  color:         var(--lumo-header-text-color);
+  font-size:     var(--lumo-font-size-xs);
+  font-weight:   600;
+  min-height:    26px;
+  padding:       0 var(--lumo-space-s);
+}
+
+/* Regular rows */
+vaadin-grid::part(row) {
+  min-height: 22px;
+}
+
+vaadin-grid::part(cell) {
+  min-height: 22px;
+  padding:    1px var(--lumo-space-s);
+  border-bottom: 1px solid var(--lumo-contrast-5pct);
+}
+
+/* Alternating rows */
+vaadin-grid::part(even-shaded-row) {
+  background: var(--app-grid-row-alt);
+}
+
+/* Selected row – classic blue highlight */
+vaadin-grid::part(selected-row) {
+  background: var(--app-grid-selected);
+}
+
+vaadin-grid::part(selected-row-cell) {
+  background: var(--app-grid-selected);
+  color:       var(--app-grid-selected-text);
+}
+
+/* Hover */
+vaadin-grid::part(row):hover vaadin-grid::part(cell) {
+  background: #e8f0f8;
+}
+
+/* Sort indicators */
+vaadin-grid-sorter {
+  font-size:   var(--lumo-font-size-xs);
+  font-weight: 600;
+  color:       var(--lumo-header-text-color);
+}
+
+/* Filter row cells */
+vaadin-grid::part(filter-cell) {
+  background: #eef2f6;
+  padding:    2px var(--lumo-space-xs);
+}
+
+/* ================================================================
+   9. TABS
+   Classic horizontal tabs with blue active underline
+   ================================================================ */
+vaadin-tabs {
+  border-bottom: 2px solid var(--app-section-line);
+  background:    transparent;
+  gap:           0;
+}
+
+vaadin-tab {
+  font-size:     var(--lumo-font-size-s);
+  font-weight:   400;
+  color:         var(--lumo-secondary-text-color);
+  padding:       4px 12px;
+  min-height:    28px;
+  border-radius: var(--lumo-border-radius-s) var(--lumo-border-radius-s) 0 0;
+  border:        1px solid transparent;
+  margin-right:  2px;
+  background:    transparent;
+  cursor:        pointer;
+  transition:    background 0.1s, color 0.1s;
+}
+
+vaadin-tab:hover {
+  background: rgba(26, 111, 173, 0.06);
+  color:      var(--lumo-primary-color);
+}
+
+vaadin-tab[selected] {
+  font-weight:   600;
+  color:         var(--lumo-primary-color);
+  background:    var(--app-panel-bg);
+  border-color:  var(--app-section-line) var(--app-section-line) var(--app-panel-bg) var(--app-section-line);
+  margin-bottom: -2px; /* Overlap the tabs border */
+}
+
+/* ================================================================
+   10. DIALOGS / MODALS
+   Classic Windows dialog style
+   ================================================================ */
+vaadin-dialog-overlay::part(overlay) {
+  background:    var(--app-panel-bg);
+  border:        1px solid var(--app-panel-border);
+  border-radius: var(--lumo-border-radius-s);
+  box-shadow:    3px 3px 12px rgba(0, 0, 0, 0.35);
+  padding:       0;
+}
+
+vaadin-dialog-overlay::part(header) {
+  background:    #3566a0;
+  color:         #ffffff;
+  font-size:     var(--lumo-font-size-m);
+  font-weight:   600;
+  padding:       6px 12px;
+  border-radius: var(--lumo-border-radius-s) var(--lumo-border-radius-s) 0 0;
+  min-height:    32px;
+  border-bottom: 1px solid #2a5080;
+}
+
+vaadin-dialog-overlay::part(content) {
+  padding: var(--lumo-space-m);
+}
+
+vaadin-dialog-overlay::part(footer) {
+  background:    var(--app-toolbar-bg);
+  border-top:    1px solid var(--app-toolbar-border);
+  padding:       var(--lumo-space-s) var(--lumo-space-m);
+  justify-content: flex-end;
+  gap:           var(--lumo-space-s);
+}
+
+/* ================================================================
+   11. FORM LAYOUT
+   ================================================================ */
+vaadin-form-layout {
+  --vaadin-form-layout-column-spacing: var(--lumo-space-m);
+}
+
+/* ================================================================
+   12. NOTIFICATIONS
+   ================================================================ */
+vaadin-notification-container {
+  z-index: 10000;
+}
+
+vaadin-notification-card {
+  font-size:     var(--lumo-font-size-s);
+  border-radius: var(--lumo-border-radius-s);
+}
+
+/* ================================================================
+   13. CONTEXT MENU OVERLAY
+   Classic popup menu style
+   ================================================================ */
+vaadin-context-menu-overlay::part(overlay) {
+  background:    var(--app-panel-bg);
+  border:        1px solid var(--app-panel-border);
+  border-radius: var(--lumo-border-radius-s);
+  box-shadow:    2px 2px 6px rgba(0,0,0,0.25);
+  padding:       2px 0;
+  min-width:     160px;
+}
+
+vaadin-context-menu-item {
+  font-size:   var(--lumo-font-size-s);
+  min-height:  22px;
+  padding:     2px 20px;
+  color:       var(--lumo-body-text-color);
+}
+
+vaadin-context-menu-item:hover {
+  background: var(--lumo-primary-color);
+  color:      #ffffff;
+}
+
+/* ================================================================
+   14. SCROLLBARS (compact, classic style)
+   ================================================================ */
+::-webkit-scrollbar {
+  width:  10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--app-disabled-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background:    #b0b0b0;
+  border-radius: 1px;
+  border:        1px solid #a0a0a0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #909090;
+}
+
+/* ================================================================
+   15. UTILITY CSS CLASSES
+   For use directly in views to replicate the screenshot layout
+   ================================================================ */
+
+/* ---- Section header (blue underline + label) ---- */
+.section-header {
+  font-size:     var(--lumo-font-size-xs);
+  font-weight:   600;
+  color:         var(--app-section-line);
+  border-bottom: 2px solid var(--app-section-line);
+  padding-bottom: 2px;
+  margin-bottom: var(--lumo-space-s);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---- White card panel ---- */
+.form-panel {
+  background:    var(--app-panel-bg);
+  border:        1px solid var(--app-panel-border);
+  border-radius: var(--lumo-border-radius-s);
+  padding:       var(--lumo-space-m);
+}
+
+/* ---- Classic toolbar ---- */
+.classic-toolbar {
+  background:    var(--app-toolbar-bg);
+  border-bottom: 1px solid var(--app-toolbar-border);
+  padding:       var(--lumo-space-xs) var(--lumo-space-m);
+  min-height:    32px;
+  display:       flex;
+  align-items:   center;
+  gap:           var(--lumo-space-s);
+  flex-shrink:   0;
+}
+
+/* ---- Classic separator line in toolbar ---- */
+.toolbar-separator {
+  width:      1px;
+  height:     18px;
+  background: var(--app-toolbar-border);
+  margin:     0 var(--lumo-space-xs);
+  flex-shrink: 0;
+}
+
+/* ---- Dialog sub-title (e.g. "Bestehender Datensatz") ---- */
+.dialog-subtitle {
+  font-size:  var(--lumo-font-size-xs);
+  color:      var(--lumo-secondary-text-color);
+  margin-top: 2px;
+}
+
+/* ---- Status badge chips ---- */
+.status-badge {
+  display:       inline-flex;
+  align-items:   center;
+  padding:       1px 6px;
+  border-radius: 2px;
+  font-size:     var(--lumo-font-size-xs);
+  font-weight:   500;
+  white-space:   nowrap;
+}
+
+.status-badge.open     { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+.status-badge.accepted { background: #d4edda; color: #155724; border: 1px solid #28a745; }
+.status-badge.rejected { background: #f8d7da; color: #721c24; border: 1px solid #dc3545; }
+.status-badge.draft    { background: #e2e3e5; color: #383d41; border: 1px solid #adb5bd; }
+.status-badge.paid     { background: #d1ecf1; color: #0c5460; border: 1px solid #17a2b8; }
+
+/* ---- Disabled input appearance (readonly fields like in screenshots) ---- */
+.field-disabled,
+[readonly] {
+  background:  var(--app-disabled-bg) !important;
+  color:       var(--lumo-secondary-text-color) !important;
+}
+
+/* ---- Pagination bar (classic [<< < 1 > >>] style) ---- */
+.classic-pagination {
+  display:     flex;
+  align-items: center;
+  gap:         1px;
+}
+
+.classic-pagination .page-num {
+  min-width:   22px;
+  height:      22px;
+  line-height: 22px;
+  text-align:  center;
+  border:      1px solid var(--lumo-primary-color);
+  background:  var(--lumo-primary-color);
+  color:       #ffffff;
+  font-size:   var(--lumo-font-size-xs);
+  font-weight: 600;
+  padding:     0 4px;
+}
+
+/* ---- View page title ---- */
+.view-title {
+  font-size:   var(--lumo-font-size-xl);
+  font-weight: 600;
+  color:       var(--lumo-header-text-color);
+  margin:      0;
+  padding:     0;
+}
+
+/* ---- Compact form grid ---- */
+.compact-form-row {
+  display:     flex;
+  gap:         var(--lumo-space-m);
+  align-items: flex-end;
+  flex-wrap:   wrap;
+}
+
+/* ================================================================
+   16. APP-SPECIFIC OVERRIDES FOR MAIN LAYOUT
+   ================================================================ */
+
+/* Main layout background */
+vaadin-app-layout {
+  --vaadin-app-layout-drawer-width: 220px;
+}
+
+vaadin-app-layout::part(navbar) {
+  background:    #2b3a4a;
+  border-bottom: 1px solid #1a2a38;
+  min-height:    36px;
+  padding:       0 var(--lumo-space-m);
+}
+
+/* Main content area */
+vaadin-app-layout::part(content) {
+  background: var(--lumo-base-color);
+}

@@ -1,0 +1,218 @@
+/* ================================================================
+   enterprise-grid.css
+   Styles for BaseEnterpriseGrid<T>
+
+   Location: src/main/frontend/themes/translation-theme/enterprise-grid.css
+   Loaded via: @CssImport("./themes/translation-theme/enterprise-grid.css")
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   1. CONTAINER
+   The VerticalLayout wrapping grid + pagination bar.
+   ---------------------------------------------------------------- */
+.egrid-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0; /* Required: lets a flex child shrink below its content size */
+    overflow: hidden;
+}
+
+/* ----------------------------------------------------------------
+   2. CELL TRUNCATION
+   Applied to the <div> returned by buildTruncatedCell().
+   The native "title" attribute provides the tooltip — no JS needed.
+   ---------------------------------------------------------------- */
+.egrid-cell {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    width: 100%;
+    max-width: 100%;
+    /* Prevent the div from pushing the column wider than its flex container */
+    min-width: 0;
+}
+
+/* ----------------------------------------------------------------
+   3. COLUMN HEADER SPAN
+   Also truncated so very long headers don't break the layout.
+   ---------------------------------------------------------------- */
+.egrid-header-span {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    width: 100%;
+    min-width: 0;
+}
+
+/* ----------------------------------------------------------------
+   4. FILTER ROW FIELDS
+   Compact sizing so the filter row doesn't consume too much space.
+   Targets both TextField and ComboBox via the shared CSS class.
+   ---------------------------------------------------------------- */
+.egrid-filter-field {
+    --lumo-text-field-size: var(--lumo-size-xs);
+    font-size: var(--lumo-font-size-xs);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.egrid-filter-field::part(input-field) {
+    min-height: var(--lumo-size-xs);
+    padding-top:    0;
+    padding-bottom: 0;
+    padding-left:   var(--lumo-space-xs);
+    padding-right:  var(--lumo-space-xs);
+    border-radius:  var(--lumo-border-radius-s);
+}
+
+/* Remove label space; filter fields have placeholder text instead */
+.egrid-filter-field::part(label) {
+    display: none;
+}
+
+/* ----------------------------------------------------------------
+   5. ACTION COLUMN BUTTON (three-dot menu trigger)
+   ---------------------------------------------------------------- */
+.egrid-action-btn {
+    color: var(--lumo-secondary-text-color);
+    transition: color 0.15s ease, background-color 0.15s ease;
+    border-radius: var(--lumo-border-radius-m);
+}
+
+.egrid-action-btn:hover {
+    color: var(--lumo-primary-color);
+    background-color: var(--lumo-primary-color-10pct);
+}
+
+/* ----------------------------------------------------------------
+   6. CONTEXT MENU ITEMS
+   ---------------------------------------------------------------- */
+
+/* "Löschen" item — red tint */
+vaadin-context-menu-overlay .egrid-menu-delete {
+    color: var(--lumo-error-color);
+}
+
+vaadin-context-menu-overlay .egrid-menu-delete:hover {
+    background-color: var(--lumo-error-color-10pct);
+}
+
+/* "Bearbeiten" item — subtle primary hint */
+vaadin-context-menu-overlay .egrid-menu-edit {
+    color: var(--lumo-primary-text-color);
+}
+
+/* ----------------------------------------------------------------
+   7. PAGINATION BAR (bottom toolbar)
+   ---------------------------------------------------------------- */
+.egrid-pagination-bar {
+    display:          flex;
+    align-items:      center;
+    flex-shrink:      0;
+    width:            100%;
+    min-height:       44px;
+    padding:          0 var(--lumo-space-m);
+    gap:              var(--lumo-space-m);
+    background-color: var(--lumo-base-color);
+    border-top:       1px solid var(--lumo-contrast-10pct);
+    box-sizing:       border-box;
+}
+
+/* Label "Einträge pro Seite:" */
+.egrid-label {
+    color:       var(--lumo-secondary-text-color);
+    font-size:   var(--lumo-font-size-s);
+    white-space: nowrap;
+    user-select: none;
+}
+
+/* Page-size <select> */
+.egrid-page-size {
+    --lumo-text-field-size: var(--lumo-size-s);
+    min-width: 68px;
+    width: auto;
+}
+
+/* "Seite X von Y" text */
+.egrid-page-info {
+    color:              var(--lumo-body-text-color);
+    font-size:          var(--lumo-font-size-s);
+    white-space:        nowrap;
+    padding:            0 var(--lumo-space-s);
+    font-variant-numeric: tabular-nums;
+    min-width:          90px;
+    text-align:         center;
+    user-select:        none;
+}
+
+/* "X Einträge gesamt" counter */
+.egrid-total {
+    color:       var(--lumo-secondary-text-color);
+    font-size:   var(--lumo-font-size-s);
+    white-space: nowrap;
+    user-select: none;
+}
+
+/* Navigation button group */
+.egrid-nav {
+    display:     flex;
+    align-items: center;
+    gap:         0;
+}
+
+/* Individual nav button */
+.egrid-nav-btn {
+    color:      var(--lumo-secondary-text-color);
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.egrid-nav-btn:hover:not([disabled]) {
+    color:            var(--lumo-primary-color);
+    background-color: var(--lumo-primary-color-10pct);
+}
+
+.egrid-nav-btn[disabled] {
+    opacity: 0.35;
+    cursor:  not-allowed;
+    pointer-events: none;
+}
+
+/* ----------------------------------------------------------------
+   8. VAADIN GRID OVERRIDES
+   Make vaadin-grid cells accommodate truncated content correctly.
+   The component column <div> must be contained by the cell.
+   ---------------------------------------------------------------- */
+
+/* Prevent the cell content container from overflowing its column width */
+vaadin-grid.egrid vaadin-grid-cell-content {
+    overflow: hidden;
+    display:  block;
+    width:    100%;
+}
+
+/* Ensure the grid itself fills its flex parent */
+vaadin-grid.egrid {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+/* ----------------------------------------------------------------
+   9. TOP FILTER PANEL (General Search & Advanced Filters)
+   ---------------------------------------------------------------- */
+.egrid-top-filter-panel {
+    background-color: var(--app-toolbar-bg);
+    border-bottom: 1px solid var(--app-toolbar-border);
+    padding: var(--lumo-space-m) !important;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.egrid-top-filter-panel vaadin-form-layout {
+    padding-top: var(--lumo-space-s);
+    border-top: 1px dashed var(--app-toolbar-border);
+    margin-top: var(--lumo-space-s);
+}
+
