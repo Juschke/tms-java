@@ -1,8 +1,12 @@
 package com.translationagency.modules.pricing.application;
 
+import com.translationagency.modules.pricing.domain.Currency;
 import com.translationagency.modules.pricing.domain.Language;
 import com.translationagency.modules.pricing.domain.PriceRule;
 import com.translationagency.modules.pricing.domain.ServiceType;
+import com.translationagency.modules.pricing.domain.Unit;
+import com.translationagency.modules.pricing.domain.CurrencyRepository;
+import com.translationagency.modules.pricing.domain.UnitRepository;
 import com.translationagency.modules.pricing.infrastructure.LanguageRepository;
 import com.translationagency.modules.pricing.infrastructure.PriceRuleRepository;
 import com.translationagency.modules.pricing.infrastructure.ServiceTypeRepository;
@@ -22,13 +26,19 @@ public class PricingService {
     private final PriceRuleRepository priceRuleRepository;
     private final LanguageRepository languageRepository;
     private final ServiceTypeRepository serviceTypeRepository;
+    private final CurrencyRepository currencyRepository;
+    private final UnitRepository unitRepository;
 
     public PricingService(PriceRuleRepository priceRuleRepository,
                           LanguageRepository languageRepository,
-                          ServiceTypeRepository serviceTypeRepository) {
+                          ServiceTypeRepository serviceTypeRepository,
+                          CurrencyRepository currencyRepository,
+                          UnitRepository unitRepository) {
         this.priceRuleRepository = priceRuleRepository;
         this.languageRepository = languageRepository;
         this.serviceTypeRepository = serviceTypeRepository;
+        this.currencyRepository = currencyRepository;
+        this.unitRepository = unitRepository;
     }
 
     public record CalculationResult(
@@ -47,6 +57,24 @@ public class PricingService {
     @Transactional(readOnly = true)
     public List<ServiceType> getAllServiceTypes() {
         return serviceTypeRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Currency> getAllCurrencies() {
+        return currencyRepository.findAllByOrderByCodeAsc();
+    }
+
+    public void saveCurrency(Currency currency) {
+        currencyRepository.save(currency);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Unit> getAllUnits() {
+        return unitRepository.findAllByOrderByCodeAsc();
+    }
+
+    public void saveUnit(Unit unit) {
+        unitRepository.save(unit);
     }
 
     @Transactional(readOnly = true)

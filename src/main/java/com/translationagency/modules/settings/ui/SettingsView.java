@@ -5,6 +5,8 @@ import com.translationagency.modules.billing.domain.DunningSetting;
 import com.translationagency.modules.pricing.application.PricingService;
 import com.translationagency.modules.pricing.domain.Language;
 import com.translationagency.modules.pricing.domain.ServiceType;
+import com.translationagency.modules.pricing.domain.Currency;
+import com.translationagency.modules.pricing.domain.Unit;
 import com.translationagency.modules.settings.application.SettingsService;
 import com.translationagency.modules.settings.domain.AccountingScheme;
 import com.translationagency.modules.settings.domain.TenantSettings;
@@ -66,11 +68,14 @@ public class SettingsView extends VerticalLayout {
 
     private VerticalLayout tenantLayout;
     private VerticalLayout masterDataLayout;
+    private VerticalLayout numberRangesLayout;
     private VerticalLayout templatesLayout;
     private VerticalLayout dunningSettingsLayout;
 
     private final Grid<Language> languageGrid = new Grid<>(Language.class, false);
     private final Grid<ServiceType> serviceTypeGrid = new Grid<>(ServiceType.class, false);
+    private final Grid<Currency> currencyGrid = new Grid<>(Currency.class, false);
+    private final Grid<Unit> unitGrid = new Grid<>(Unit.class, false);
     private final Grid<NumberRange> numberRangeGrid = new Grid<>(NumberRange.class, false);
     private final Grid<TextTemplate> templateGrid = new Grid<>(TextTemplate.class, false);
 
@@ -114,10 +119,11 @@ public class SettingsView extends VerticalLayout {
     private void createTabs() {
         Tab tenantTab = new Tab("Mandant");
         Tab masterDataTab = new Tab("Stammdaten");
+        Tab numberRangesTab = new Tab("Nummernkreise");
         Tab templatesTab = new Tab("Textvorlagen");
         Tab dunningSettingsTab = new Tab("Mahneinstellungen");
 
-        tabs.add(tenantTab, masterDataTab, templatesTab, dunningSettingsTab);
+        tabs.add(tenantTab, masterDataTab, numberRangesTab, templatesTab, dunningSettingsTab);
         tabs.addSelectedChangeListener(event -> {
             contentContainer.removeAll();
             if (event.getSelectedTab().equals(tenantTab)) {
@@ -125,6 +131,9 @@ public class SettingsView extends VerticalLayout {
             } else if (event.getSelectedTab().equals(masterDataTab)) {
                 contentContainer.add(masterDataLayout);
                 refreshMasterData();
+            } else if (event.getSelectedTab().equals(numberRangesTab)) {
+                contentContainer.add(numberRangesLayout);
+                refreshNumberRanges();
             } else if (event.getSelectedTab().equals(templatesTab)) {
                 contentContainer.add(templatesLayout);
                 refreshTextTemplates();
@@ -137,6 +146,7 @@ public class SettingsView extends VerticalLayout {
     private void setupTabContents() {
         setupTenantTab();
         setupMasterDataTab();
+        setupNumberRangesTab();
         setupTextTemplatesTab();
         setupDunningSettingsTab();
 
@@ -320,6 +330,53 @@ public class SettingsView extends VerticalLayout {
         topSections.setSpacing(true);
         topSections.setFlexGrow(1, languageSection, serviceSection);
 
+        VerticalLayout currencySection = new VerticalLayout();
+        currencySection.setPadding(false);
+        currencySection.setWidthFull();
+        Button addCurrencyBtn = new Button("Waehrung", VaadinIcon.PLUS.create(), e -> openCurrencyDialog(new Currency()));
+        addCurrencyBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        currencyGrid.setWidthFull();
+        currencyGrid.addColumn(Currency::getCode).setHeader("Code").setAutoWidth(true).setSortable(true);
+        currencyGrid.addColumn(Currency::getName).setHeader("Name").setAutoWidth(true).setSortable(true);
+        currencyGrid.addColumn(Currency::getSymbol).setHeader("Symbol").setAutoWidth(true);
+        currencyGrid.addComponentColumn(currency -> {
+            Button editBtn = new Button(VaadinIcon.EDIT.create(), e -> openCurrencyDialog(currency));
+            editBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+            editBtn.setTooltipText("Bearbeiten");
+            return editBtn;
+        }).setHeader("Aktionen").setAutoWidth(true);
+        currencySection.add(createSectionHeader("Waehrungen", addCurrencyBtn), currencyGrid);
+
+        VerticalLayout unitSection = new VerticalLayout();
+        unitSection.setPadding(false);
+        unitSection.setWidthFull();
+        Button addUnitBtn = new Button("Einheit", VaadinIcon.PLUS.create(), e -> openUnitDialog(new Unit()));
+        addUnitBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        unitGrid.setWidthFull();
+        unitGrid.addColumn(Unit::getCode).setHeader("Code").setAutoWidth(true).setSortable(true);
+        unitGrid.addColumn(Unit::getName).setHeader("Name").setAutoWidth(true).setSortable(true);
+        unitGrid.addComponentColumn(unit -> {
+            Button editBtn = new Button(VaadinIcon.EDIT.create(), e -> openUnitDialog(unit));
+            editBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+            editBtn.setTooltipText("Bearbeiten");
+            return editBtn;
+        }).setHeader("Aktionen").setAutoWidth(true);
+        unitSection.add(createSectionHeader("Einheiten", addUnitBtn), unitGrid);
+
+        HorizontalLayout bottomSections = new HorizontalLayout(currencySection, unitSection);
+        bottomSections.setWidthFull();
+        bottomSections.setSpacing(true);
+        bottomSections.setFlexGrow(1, currencySection, unitSection);
+
+        masterDataLayout.add(topSections, bottomSections);
+        refreshMasterData();
+    }
+
+    private void setupNumberRangesTab() {
+        numberRangesLayout = new VerticalLayout();
+        numberRangesLayout.setSizeFull();
+        numberRangesLayout.setPadding(false);
+
         VerticalLayout numberRangeSection = new VerticalLayout();
         numberRangeSection.setPadding(false);
         numberRangeSection.setWidthFull();
@@ -337,10 +394,13 @@ public class SettingsView extends VerticalLayout {
             editBtn.setTooltipText("Bearbeiten");
             return editBtn;
         }).setHeader("Aktionen").setAutoWidth(true);
-        numberRangeSection.add(new H3("Nummernkreise"), numberRangeGrid);
+        
+        Button addNumberRangeBtn = new Button("Nummernkreis", VaadinIcon.PLUS.create(), e -> openNumberRangeDialog(new NumberRange()));
+        addNumberRangeBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        numberRangeSection.add(createSectionHeader("Nummernkreise", addNumberRangeBtn), numberRangeGrid);
 
-        masterDataLayout.add(topSections, numberRangeSection);
-        refreshMasterData();
+        numberRangesLayout.add(numberRangeSection);
+        refreshNumberRanges();
     }
 
     private void setupTextTemplatesTab() {
@@ -475,6 +535,11 @@ public class SettingsView extends VerticalLayout {
     private void refreshMasterData() {
         languageGrid.setItems(pricingService.getAllLanguages());
         serviceTypeGrid.setItems(pricingService.getAllServiceTypes());
+        currencyGrid.setItems(pricingService.getAllCurrencies());
+        unitGrid.setItems(pricingService.getAllUnits());
+    }
+
+    private void refreshNumberRanges() {
         numberRangeGrid.setItems(numberRangeService.getRangesForTenant(currentTenant.getId()));
     }
 
@@ -558,6 +623,10 @@ public class SettingsView extends VerticalLayout {
         dialog.setHeaderTitle("Nummernkreis bearbeiten");
         dialog.setWidth("520px");
 
+        TextField entityType = new TextField("Dokumenttyp");
+        entityType.setValue(getEntityTypeLabel(range.getEntityType()));
+        entityType.setReadOnly(true);
+
         TextField prefix = new TextField("Praefix");
         IntegerField currentNumber = new IntegerField("Aktueller Zaehlerstand");
         IntegerField increment = new IntegerField("Schrittweite");
@@ -574,7 +643,7 @@ public class SettingsView extends VerticalLayout {
         yearBased.setValue(range.isYearBased());
         resetYearly.setValue(range.isResetYearly());
 
-        FormLayout form = new FormLayout(prefix, currentNumber, increment, padding, separator, yearBased, resetYearly);
+        FormLayout form = new FormLayout(entityType, prefix, currentNumber, increment, padding, separator, yearBased, resetYearly);
         form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1), new FormLayout.ResponsiveStep("520px", 2));
 
         Button saveBtn = new Button("Speichern", VaadinIcon.CHECK.create(), e -> {
@@ -585,10 +654,91 @@ public class SettingsView extends VerticalLayout {
             range.setSeparator(separator.getValue());
             range.setYearBased(yearBased.getValue());
             range.setResetYearly(resetYearly.getValue());
+            
+            if (range.getTenant() == null) {
+                range.setTenant(currentTenant);
+            }
+            if (range.getId() == null) {
+                range.setId(UUID.randomUUID());
+            }
+
             numberRangeService.saveRange(range);
             dialog.close();
-            refreshMasterData();
+            refreshNumberRanges();
             Notification.show("Nummernkreis gespeichert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        });
+        saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        dialog.getFooter().add(new Button("Abbrechen", e -> dialog.close()), saveBtn);
+        dialog.add(form);
+        dialog.open();
+    }
+
+    private void openCurrencyDialog(Currency currency) {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle(currency.getId() == null ? "Waehrung anlegen" : "Waehrung bearbeiten");
+        dialog.setWidth("420px");
+
+        TextField code = new TextField("Code (z.B. EUR)");
+        TextField name = new TextField("Name (z.B. Euro)");
+        TextField symbol = new TextField("Symbol (z.B. €)");
+
+        code.setValue(valueOrEmpty(currency.getCode()));
+        name.setValue(valueOrEmpty(currency.getName()));
+        symbol.setValue(valueOrEmpty(currency.getSymbol()));
+
+        FormLayout form = new FormLayout(code, name, symbol);
+
+        Button saveBtn = new Button("Speichern", VaadinIcon.CHECK.create(), e -> {
+            if (isBlank(code.getValue()) || isBlank(name.getValue())) {
+                Notification.show("Code und Name sind erforderlich").addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
+            }
+            if (currency.getId() == null) {
+                currency.setId(UUID.randomUUID());
+            }
+            currency.setCode(code.getValue().trim().toUpperCase());
+            currency.setName(name.getValue().trim());
+            currency.setSymbol(symbol.getValue().trim());
+            pricingService.saveCurrency(currency);
+            dialog.close();
+            refreshMasterData();
+            Notification.show("Waehrung gespeichert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        });
+        saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        dialog.getFooter().add(new Button("Abbrechen", e -> dialog.close()), saveBtn);
+        dialog.add(form);
+        dialog.open();
+    }
+
+    private void openUnitDialog(Unit unit) {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle(unit.getId() == null ? "Einheit anlegen" : "Einheit bearbeiten");
+        dialog.setWidth("420px");
+
+        TextField code = new TextField("Code (z.B. WORDS)");
+        TextField name = new TextField("Name (z.B. Wörter)");
+
+        code.setValue(valueOrEmpty(unit.getCode()));
+        name.setValue(valueOrEmpty(unit.getName()));
+
+        FormLayout form = new FormLayout(code, name);
+
+        Button saveBtn = new Button("Speichern", VaadinIcon.CHECK.create(), e -> {
+            if (isBlank(code.getValue()) || isBlank(name.getValue())) {
+                Notification.show("Code und Name sind erforderlich").addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
+            }
+            if (unit.getId() == null) {
+                unit.setId(UUID.randomUUID());
+            }
+            unit.setCode(code.getValue().trim().toUpperCase());
+            unit.setName(name.getValue().trim());
+            pricingService.saveUnit(unit);
+            dialog.close();
+            refreshMasterData();
+            Notification.show("Einheit gespeichert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
         });
         saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
