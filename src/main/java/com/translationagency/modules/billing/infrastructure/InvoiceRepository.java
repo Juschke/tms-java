@@ -30,7 +30,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
      * <p>The {@link Pageable} argument carries page index, page size and sort orders
      * from {@link org.springframework.data.domain.PageRequest}.
      */
-    @Query("""
+    @Query(value = """
             SELECT i FROM Invoice i
             LEFT JOIN FETCH i.customer c
             WHERE i.tenant.id = :tenantId
@@ -39,8 +39,20 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
               AND (:numberFilter = '' OR LOWER(i.invoiceNumber) LIKE LOWER(CONCAT('%', :numberFilter, '%')))
               AND (:customerFilter = '' OR (c IS NOT NULL AND LOWER(c.companyName) LIKE LOWER(CONCAT('%', :customerFilter, '%'))))
               AND (:status IS NULL OR i.status = :status)
-              AND (:issuedFrom IS NULL OR i.issuedAt >= :issuedFrom)
-              AND (:issuedTo IS NULL OR i.issuedAt <= :issuedTo)
+              AND (:issuedFromEnabled = FALSE OR i.issuedAt >= :issuedFrom)
+              AND (:issuedToEnabled = FALSE OR i.issuedAt <= :issuedTo)
+            """,
+            countQuery = """
+            SELECT COUNT(i) FROM Invoice i
+            LEFT JOIN i.customer c
+            WHERE i.tenant.id = :tenantId
+              AND i.deletedAt IS NULL
+              AND (:search IS NULL OR :search = '' OR LOWER(i.invoiceNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', :search, '%')))
+              AND (:numberFilter = '' OR LOWER(i.invoiceNumber) LIKE LOWER(CONCAT('%', :numberFilter, '%')))
+              AND (:customerFilter = '' OR (c IS NOT NULL AND LOWER(c.companyName) LIKE LOWER(CONCAT('%', :customerFilter, '%'))))
+              AND (:status IS NULL OR i.status = :status)
+              AND (:issuedFromEnabled = FALSE OR i.issuedAt >= :issuedFrom)
+              AND (:issuedToEnabled = FALSE OR i.issuedAt <= :issuedTo)
             """)
     Page<Invoice> findFiltered(
             @Param("tenantId")       UUID          tenantId,
@@ -48,7 +60,9 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
             @Param("numberFilter")   String        numberFilter,
             @Param("customerFilter") String        customerFilter,
             @Param("status")         InvoiceStatus status,
+            @Param("issuedFromEnabled") boolean issuedFromEnabled,
             @Param("issuedFrom")     java.time.OffsetDateTime issuedFrom,
+            @Param("issuedToEnabled") boolean issuedToEnabled,
             @Param("issuedTo")       java.time.OffsetDateTime issuedTo,
             Pageable                               pageable
     );

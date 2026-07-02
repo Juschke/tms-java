@@ -23,8 +23,6 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
-import com.vaadin.flow.component.textfield.BigDecimalField;
-import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
@@ -141,8 +139,6 @@ public class InvoicesView extends VerticalLayout {
         dunningLayout.setSizeFull();
         dunningLayout.setPadding(false);
 
-        Button settingsBtn = new Button("Mahn-Einstellungen", VaadinIcon.COG.create(), e -> openDunningSettingsDialog());
-
         overdueGrid.setSizeFull();
         overdueGrid.addColumn(Invoice::getInvoiceNumber).setHeader("Rechnungsnummer").setAutoWidth(true);
         overdueGrid.addColumn(inv -> inv.getCustomer() != null ? inv.getCustomer().getCompanyName() : "-").setHeader("Kunde").setAutoWidth(true);
@@ -180,7 +176,7 @@ public class InvoicesView extends VerticalLayout {
             return actionLayout;
         }).setHeader("Aktionen").setAutoWidth(true);
 
-        dunningLayout.add(settingsBtn, overdueGrid);
+        dunningLayout.add(overdueGrid);
     }
 
     private void updateInvoiceList() {
@@ -197,44 +193,6 @@ public class InvoicesView extends VerticalLayout {
                     .collect(Collectors.toList());
             overdueGrid.setItems(overdueInvoices);
         }
-    }
-
-    private void openDunningSettingsDialog() {
-        Dialog dialog = new Dialog();
-        dialog.setHeaderTitle("Mahnwesen Einstellungen");
-        dialog.setWidth("400px");
-
-        DunningSetting settings = dunningService.getDunningSettings(currentTenant.getId());
-
-        FormLayout formLayout = new FormLayout();
-        BigDecimalField feePerLevel = new BigDecimalField("Mahngebühr pro Level (EUR)");
-        IntegerField daysLvl1 = new IntegerField("Tage überfällig Stufe 1");
-        IntegerField daysLvl2 = new IntegerField("Tage überfällig Stufe 2");
-        IntegerField daysLvl3 = new IntegerField("Tage überfällig Stufe 3");
-
-        formLayout.add(feePerLevel, daysLvl1, daysLvl2, daysLvl3);
-
-        feePerLevel.setValue(settings.getFeePerLevel());
-        daysLvl1.setValue(settings.getDaysOverdueLevel1());
-        daysLvl2.setValue(settings.getDaysOverdueLevel2());
-        daysLvl3.setValue(settings.getDaysOverdueLevel3());
-
-        Button saveBtn = new Button("Speichern", VaadinIcon.CHECK.create(), e -> {
-            settings.setFeePerLevel(feePerLevel.getValue());
-            settings.setDaysOverdueLevel1(daysLvl1.getValue() != null ? daysLvl1.getValue() : 3);
-            settings.setDaysOverdueLevel2(daysLvl2.getValue() != null ? daysLvl2.getValue() : 10);
-            settings.setDaysOverdueLevel3(daysLvl3.getValue() != null ? daysLvl3.getValue() : 20);
-
-            dunningService.saveSettings(settings);
-            dialog.close();
-            Notification.show("Einstellungen erfolgreich gespeichert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-        });
-        saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-
-        Button cancelBtn = new Button("Abbrechen", e -> dialog.close());
-        dialog.getFooter().add(cancelBtn, saveBtn);
-        dialog.add(formLayout);
-        dialog.open();
     }
 
     private void openDunningHistoryDialog(Invoice invoice) {

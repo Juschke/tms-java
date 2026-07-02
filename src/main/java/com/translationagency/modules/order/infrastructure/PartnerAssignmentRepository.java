@@ -9,5 +9,10 @@ import java.util.UUID;
 
 @Repository
 public interface PartnerAssignmentRepository extends JpaRepository<PartnerAssignment, UUID> {
-    List<PartnerAssignment> findByOrderId(UUID orderId);
+    @org.springframework.data.jpa.repository.Query("SELECT DISTINCT pa FROM PartnerAssignment pa " +
+            "LEFT JOIN FETCH pa.partner " +
+            "LEFT JOIN FETCH pa.order o " +
+            "LEFT JOIN FETCH o.customer " +
+            "WHERE o.id = :orderId")
+    List<PartnerAssignment> findByOrderId(@org.springframework.data.repository.query.Param("orderId") UUID orderId);
 }

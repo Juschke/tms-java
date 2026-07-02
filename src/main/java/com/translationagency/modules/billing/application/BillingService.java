@@ -69,8 +69,10 @@ public class BillingService {
                 numberFilter   != null ? numberFilter   : "",
                 customerFilter != null ? customerFilter : "",
                 status,
-                issuedFrom,
-                issuedTo,
+                issuedFrom != null,
+                issuedFrom != null ? issuedFrom : OffsetDateTime.now(),
+                issuedTo != null,
+                issuedTo != null ? issuedTo : OffsetDateTime.now(),
                 pageable
         );
     }

@@ -8,6 +8,7 @@ import com.translationagency.modules.inquiry.ui.QuotesView;
 import com.translationagency.modules.order.ui.OrdersView;
 import com.translationagency.modules.partner.ui.PartnersView;
 import com.translationagency.modules.pricing.ui.PricingView;
+import com.translationagency.modules.settings.ui.SettingsView;
 import com.translationagency.security.SecurityService;
 import com.translationagency.ui.dashboard.DashboardView;
 import com.vaadin.flow.component.applayout.AppLayout;
@@ -58,42 +59,16 @@ public class MainLayout extends AppLayout {
 
     private void createDrawer() {
         SideNav nav = new SideNav();
-
-        SideNavItem dashboard = new SideNavItem("Dashboard", DashboardView.class, VaadinIcon.DASHBOARD.create());
-        dashboard.getElement().setAttribute("title", "Dashboard");
-        nav.addItem(dashboard);
-
-        SideNavItem customers = new SideNavItem("Kunden", CustomersView.class, VaadinIcon.USERS.create());
-        customers.getElement().setAttribute("title", "Kunden");
-        nav.addItem(customers);
-
-        SideNavItem inquiries = new SideNavItem("Anfragen", InquiriesView.class, VaadinIcon.QUESTION.create());
-        inquiries.getElement().setAttribute("title", "Anfragen");
-        nav.addItem(inquiries);
-
-        SideNavItem quotes = new SideNavItem("Angebote", QuotesView.class, VaadinIcon.FILE_TEXT.create());
-        quotes.getElement().setAttribute("title", "Angebote");
-        nav.addItem(quotes);
-
-        SideNavItem orders = new SideNavItem("Aufträge", OrdersView.class, VaadinIcon.TASKS.create());
-        orders.getElement().setAttribute("title", "Aufträge");
-        nav.addItem(orders);
-
-        SideNavItem partners = new SideNavItem("Partner", PartnersView.class, VaadinIcon.HANDSHAKE.create());
-        partners.getElement().setAttribute("title", "Partner");
-        nav.addItem(partners);
-
-        SideNavItem invoices = new SideNavItem("Rechnungen", InvoicesView.class, VaadinIcon.MONEY.create());
-        invoices.getElement().setAttribute("title", "Rechnungen");
-        nav.addItem(invoices);
-
-        SideNavItem vendorInvoices = new SideNavItem("Eingangsrechnungen & Kosten", VendorInvoicesView.class, VaadinIcon.RECORDS.create());
-        vendorInvoices.getElement().setAttribute("title", "Eingangsrechnungen & Kosten");
-        nav.addItem(vendorInvoices);
-
-        SideNavItem pricing = new SideNavItem("Preise & Tarife", PricingView.class, VaadinIcon.COINS.create());
-        pricing.getElement().setAttribute("title", "Preise & Tarife");
-        nav.addItem(pricing);
+        nav.addItem(new SideNavItem("Dashboard", DashboardView.class, VaadinIcon.DASHBOARD.create()));
+        nav.addItem(new SideNavItem("Kunden", CustomersView.class, VaadinIcon.USERS.create()));
+        nav.addItem(new SideNavItem("Anfragen", InquiriesView.class, VaadinIcon.QUESTION.create()));
+        nav.addItem(new SideNavItem("Angebote", QuotesView.class, VaadinIcon.FILE_TEXT.create()));
+        nav.addItem(new SideNavItem("Aufträge", OrdersView.class, VaadinIcon.TASKS.create()));
+        nav.addItem(new SideNavItem("Partner", PartnersView.class, VaadinIcon.HANDSHAKE.create()));
+        nav.addItem(new SideNavItem("Rechnungen", InvoicesView.class, VaadinIcon.MONEY.create()));
+        nav.addItem(new SideNavItem("Eingangsrechnungen & Kosten", VendorInvoicesView.class, VaadinIcon.RECORDS.create()));
+        nav.addItem(new SideNavItem("Preise & Tarife", PricingView.class, VaadinIcon.COINS.create()));
+        nav.addItem(new SideNavItem("Einstellungen", SettingsView.class, VaadinIcon.COG.create()));
 
         addToDrawer(nav);
     }

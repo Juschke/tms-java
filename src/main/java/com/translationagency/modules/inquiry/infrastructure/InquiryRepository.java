@@ -25,7 +25,7 @@ public interface InquiryRepository extends JpaRepository<Inquiry, UUID> {
             "WHERE i.tenant.id = :tenantId AND i.deletedAt IS NULL " +
             "AND (:search IS NULL OR :search = '' OR " +
             "     LOWER(i.customer.companyName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "     LOWER(i.projectNotes) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "     LOWER(i.notes) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:customerName IS NULL OR :customerName = '' OR LOWER(i.customer.companyName) LIKE LOWER(CONCAT('%', :customerName, '%'))) " +
             "AND (:status IS NULL OR i.status = :status) " +
             "AND (:sourceLanguageId IS NULL OR i.sourceLanguage.id = :sourceLanguageId) " +
@@ -35,7 +35,7 @@ public interface InquiryRepository extends JpaRepository<Inquiry, UUID> {
             countQuery = "SELECT count(i) FROM Inquiry i WHERE i.tenant.id = :tenantId AND i.deletedAt IS NULL " +
             "AND (:search IS NULL OR :search = '' OR " +
             "     LOWER(i.customer.companyName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "     LOWER(i.projectNotes) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "     LOWER(i.notes) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:customerName IS NULL OR :customerName = '' OR LOWER(i.customer.companyName) LIKE LOWER(CONCAT('%', :customerName, '%'))) " +
             "AND (:status IS NULL OR i.status = :status) " +
             "AND (:sourceLanguageId IS NULL OR i.sourceLanguage.id = :sourceLanguageId) " +

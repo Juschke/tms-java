@@ -106,6 +106,12 @@ public abstract class BaseEnterpriseGrid<T> extends VerticalLayout {
     private Select<Integer> pageSizeSelect;
 
     // =========================================================
+    // Initialization Guard
+    // =========================================================
+
+    private boolean structureInitialized = false;
+
+    // =========================================================
     // Filter Row Reference (exposed to subclasses)
     // =========================================================
 
@@ -166,23 +172,8 @@ public abstract class BaseEnterpriseGrid<T> extends VerticalLayout {
         configureGridDefaults();
 
         // Let the subclass define its columns first
-        configureColumns();
-
-        // Action column is always appended last, frozen to the right
-        configureActionColumn();
-
-        // Sort listener translates Vaadin sort orders → Spring Sort
-        configureSortListener();
-
-        // Filter row must come AFTER all columns are added
-        this.filterRow = grid.appendHeaderRow();
-        configureFilters(filterRow);
-
-        HorizontalLayout paginationBar = buildPaginationBar();
-        add(topFilterPanel, grid, paginationBar);
-        setFlexGrow(1, grid);
-
-        // Do NOT call loadData() here; subclass fields may be null at this point.
+        // The concrete grid structure is built lazily in initialize()
+        // so subclasses can finish wiring their own fields first.
     }
 
     private void buildTopFilterPanel() {
@@ -296,6 +287,24 @@ public abstract class BaseEnterpriseGrid<T> extends VerticalLayout {
      * Must be called after all service fields and filter state are initialized.
      */
     protected final void initialize() {
+        if (!structureInitialized) {
+            configureColumns();
+
+            // Action column is always appended last, frozen to the right
+            configureActionColumn();
+
+            // Sort listener translates Vaadin sort orders → Spring Sort
+            configureSortListener();
+
+            // Filter row must come AFTER all columns are added
+            this.filterRow = grid.appendHeaderRow();
+            configureFilters(filterRow);
+
+            HorizontalLayout paginationBar = buildPaginationBar();
+            add(topFilterPanel, grid, paginationBar);
+            setFlexGrow(1, grid);
+            structureInitialized = true;
+        }
         loadData();
     }
 

@@ -7,14 +7,17 @@ import com.translationagency.modules.crm.domain.Customer;
 import com.translationagency.modules.document.application.DocumentService;
 import com.translationagency.modules.document.application.PdfService;
 import com.translationagency.modules.document.ui.DocumentAttachmentList;
+import com.translationagency.modules.order.application.OrderNoteService;
 import com.translationagency.modules.order.application.OrderService;
 import com.translationagency.modules.order.domain.*;
 import com.translationagency.modules.partner.application.PartnerService;
 import com.translationagency.modules.partner.domain.Partner;
 import com.translationagency.modules.pricing.application.PricingService;
+import com.translationagency.modules.tenant.domain.UserAccount;
 import com.translationagency.modules.tenant.domain.Tenant;
 import com.translationagency.security.SecurityService;
 import com.translationagency.ui.MainLayout;
+import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -35,6 +38,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.textfield.NumberField;
+import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.BeforeEvent;
 import com.vaadin.flow.router.HasUrlParameter;
@@ -61,6 +65,7 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
     private final PartnerService partnerService;
     private final BillingService billingService;
     private final DocumentService documentService;
+    private final OrderNoteService orderNoteService;
     private final SecurityService securityService;
     private final PdfService pdfService;
     private final PricingService pricingService;
@@ -77,17 +82,19 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
     private VerticalLayout detailsLayout;
     private VerticalLayout itemsLayout;
     private VerticalLayout partnerLayout;
+    private VerticalLayout notesLayout;
     private DocumentAttachmentList filesLayout;
     private VerticalLayout billingLayout;
 
     public OrderDetailView(OrderService orderService, PartnerService partnerService,
                            BillingService billingService, DocumentService documentService,
-                           SecurityService securityService, PdfService pdfService,
+                           OrderNoteService orderNoteService, SecurityService securityService, PdfService pdfService,
                            PricingService pricingService) {
         this.orderService = orderService;
         this.partnerService = partnerService;
         this.billingService = billingService;
         this.documentService = documentService;
+        this.orderNoteService = orderNoteService;
         this.securityService = securityService;
         this.pdfService = pdfService;
         this.pricingService = pricingService;
@@ -102,7 +109,7 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
         backButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
         HorizontalLayout header = new HorizontalLayout(backButton, title);
-        header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
+        header.setDefaultVerticalComponentAlignment(com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.CENTER);
         add(header);
 
         createTabs();
@@ -139,10 +146,11 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
         Tab detailsTab = new Tab("Auftragsdaten");
         Tab itemsTab = new Tab("Teilaufträge");
         Tab partnerTab = new Tab("Partnerzuweisung");
+        Tab notesTab = new Tab("Notizen");
         Tab filesTab = new Tab("Dokumentenarchiv");
         Tab billingTab = new Tab("Abrechnung & Finanzen");
 
-        tabs.add(detailsTab, itemsTab, partnerTab, filesTab, billingTab);
+        tabs.add(detailsTab, itemsTab, partnerTab, notesTab, filesTab, billingTab);
         tabs.addSelectedChangeListener(event -> {
             contentContainer.removeAll();
             if (event.getSelectedTab().equals(detailsTab)) {
@@ -153,6 +161,9 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
             } else if (event.getSelectedTab().equals(partnerTab)) {
                 contentContainer.add(partnerLayout);
                 refreshPartnerTab();
+            } else if (event.getSelectedTab().equals(notesTab)) {
+                contentContainer.add(notesLayout);
+                refreshNotesTab();
             } else if (event.getSelectedTab().equals(filesTab)) {
                 contentContainer.add(filesLayout);
                 filesLayout.refresh();
@@ -167,6 +178,7 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
         setupDetailsTab();
         setupItemsTab();
         setupPartnerTab();
+        setupNotesTab();
         setupFilesTab();
         setupBillingTab();
 
@@ -178,11 +190,14 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
     private void setupDetailsTab() {
         detailsLayout = new VerticalLayout();
         detailsLayout.setSizeFull();
-        detailsLayout.setPadding(true);
+        detailsLayout.setPadding(false);
         refreshDetailsTab();
     }
 
     private void refreshDetailsTab() {
+        if (detailsLayout != null && buildDetailsTabSplit()) {
+            return;
+        }
         if (detailsLayout != null) {
             detailsLayout.removeAll();
             FormLayout form = new FormLayout();
@@ -227,6 +242,9 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
     }
 
     private void refreshPartnerTab() {
+        if (partnerLayout != null && buildPartnerTabContent()) {
+            return;
+        }
         partnerLayout.removeAll();
 
         H3 title = new H3("Partnerzuweisungen");
@@ -303,6 +321,297 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
         assignBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         partnerLayout.add(formTitle, assignForm, assignBtn);
+    }
+
+    private boolean buildDetailsTabSplit() {
+        detailsLayout.removeAll();
+
+        HorizontalLayout split = new HorizontalLayout();
+        split.setWidthFull();
+        split.setSpacing(true);
+        split.setPadding(false);
+        split.setDefaultVerticalComponentAlignment(com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.START);
+
+        VerticalLayout customerPanel = createCustomerDetailsPanel();
+        VerticalLayout partnerPanel = createPartnerAssignmentPanel();
+
+        customerPanel.getStyle().set("flex", "1 1 0");
+        customerPanel.getStyle().set("min-width", "420px");
+        partnerPanel.getStyle().set("flex", "1 1 0");
+        partnerPanel.getStyle().set("min-width", "420px");
+
+        split.add(customerPanel, partnerPanel);
+        detailsLayout.add(split);
+        return true;
+    }
+
+    private boolean buildPartnerTabContent() {
+        partnerLayout.removeAll();
+        partnerLayout.add(createPartnerAssignmentPanel());
+        return true;
+    }
+
+    private VerticalLayout createCustomerDetailsPanel() {
+        VerticalLayout panel = new VerticalLayout();
+        panel.setWidthFull();
+        panel.setPadding(false);
+        panel.setSpacing(true);
+
+        H3 customerTitle = new H3("Kundendaten");
+        customerTitle.addClassNames("m-0");
+
+        FormLayout customerForm = new FormLayout();
+        customerForm.setWidthFull();
+        customerForm.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("720px", 2)
+        );
+        customerForm.add(
+                readOnlyField("Kundennummer", order.getCustomer().getCustomerNumber()),
+                readOnlyField("Firmenname", order.getCustomer().getCompanyName()),
+                readOnlyField("USt-ID", order.getCustomer().getVatId()),
+                readOnlyField("Leitweg-ID", order.getCustomer().getLeitwegId()),
+                readOnlyField("Strasse", order.getCustomer().getBillingAddressStreet()),
+                readOnlyField("PLZ", order.getCustomer().getBillingAddressZip()),
+                readOnlyField("Ort", order.getCustomer().getBillingAddressCity()),
+                readOnlyField("Land", order.getCustomer().getBillingAddressCountry())
+        );
+
+        H3 orderTitle = new H3("Auftragsdaten");
+        orderTitle.addClassNames("m-0");
+
+        FormLayout orderForm = new FormLayout();
+        orderForm.setWidthFull();
+        orderForm.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("720px", 2)
+        );
+        orderForm.add(
+                readOnlyField("Auftragsnummer", order.getOrderNumber()),
+                readOnlyField("Status", order.getStatus() != null ? order.getStatus().name() : "-"),
+                readOnlyField("Lieferart", order.getDeliveryMethod()),
+                readOnlyField("Netto-Gesamtbetrag", order.getNetAmount() + " EUR"),
+                readOnlyField("MwSt. (" + order.getVatPercent() + "%)", order.getVatAmount() + " EUR"),
+                readOnlyField("Brutto-Gesamtbetrag", order.getGrossAmount() + " EUR"),
+                readOnlyField("Lieferfrist", order.getDeliveryDeadline() != null
+                        ? order.getDeliveryDeadline().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+                        : "-")
+        );
+
+        panel.add(customerTitle, customerForm, orderTitle, orderForm);
+        return panel;
+    }
+
+    private VerticalLayout createPartnerAssignmentPanel() {
+        VerticalLayout panel = new VerticalLayout();
+        panel.setWidthFull();
+        panel.setPadding(false);
+        panel.setSpacing(true);
+
+        H3 title = new H3("Partnerzuweisung");
+        title.addClassNames("m-0");
+        panel.add(title);
+
+        Grid<PartnerAssignment> assignmentGrid = new Grid<>(PartnerAssignment.class, false);
+        assignmentGrid.setWidthFull();
+        assignmentGrid.addColumn(a -> a.getPartner() != null ? a.getPartner().getFullName() : "-").setHeader("Partner");
+        assignmentGrid.addColumn(a -> a.getFee() != null ? a.getFee().toString() + " EUR" : "-").setHeader("Honorar");
+        assignmentGrid.addColumn(a -> a.getDeadline() != null ? a.getDeadline().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "-").setHeader("Frist");
+        assignmentGrid.addColumn(a -> a.getStatus() != null ? a.getStatus().name() : "-").setHeader("Status");
+
+        assignmentGrid.addComponentColumn(assignment -> {
+            HorizontalLayout actionLayout = new HorizontalLayout();
+            if (assignment.getStatus() == PartnerAssignmentStatus.OFFERED) {
+                Button acceptBtn = new Button("Annehmen", e -> {
+                    String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
+                    orderService.updateAssignmentStatus(assignment, PartnerAssignmentStatus.ACCEPTED, username);
+                    Notification.show("Zuweisung akzeptiert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                    refreshPartnerTab();
+                    refreshDetailsTab();
+                });
+                acceptBtn.addThemeVariants(ButtonVariant.LUMO_SUCCESS, ButtonVariant.LUMO_SMALL);
+                actionLayout.add(acceptBtn);
+            } else if (assignment.getStatus() == PartnerAssignmentStatus.ACCEPTED || assignment.getStatus() == PartnerAssignmentStatus.IN_PROGRESS) {
+                Button submitBtn = new Button("Einreichen", e -> {
+                    String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
+                    orderService.updateAssignmentStatus(assignment, PartnerAssignmentStatus.SUBMITTED, username);
+                    Notification.show("Übersetzung eingereicht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                    refreshPartnerTab();
+                    refreshDetailsTab();
+                });
+                submitBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
+                actionLayout.add(submitBtn);
+            } else if (assignment.getStatus() == PartnerAssignmentStatus.SUBMITTED) {
+                Button approveBtn = new Button("Freigeben", e -> {
+                    String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
+                    orderService.updateAssignmentStatus(assignment, PartnerAssignmentStatus.APPROVED, username);
+                    Notification.show("Übersetzung freigegeben und abgenommen").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                    refreshPartnerTab();
+                    refreshDetailsTab();
+                });
+                approveBtn.addThemeVariants(ButtonVariant.LUMO_SUCCESS, ButtonVariant.LUMO_SMALL);
+                actionLayout.add(approveBtn);
+            }
+            return actionLayout;
+        }).setHeader("Aktionen");
+
+        List<PartnerAssignment> assignments = orderService.getAssignmentsForOrder(order.getId());
+        assignmentGrid.setItems(assignments);
+        panel.add(assignmentGrid);
+
+        H3 formTitle = new H3("Neuen Partner zuweisen");
+        FormLayout assignForm = new FormLayout();
+        assignForm.setWidthFull();
+        assignForm.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("720px", 2)
+        );
+
+        ComboBox<Partner> partnerCombo = new ComboBox<>("Partner / Übersetzer");
+        partnerCombo.setItems(partnerService.getAllPartners(tenant.getId()));
+        partnerCombo.setItemLabelGenerator(Partner::getFullName);
+
+        NumberField feeField = new NumberField("Honorar (EUR)");
+        DatePicker deadlinePicker = new DatePicker("Frist");
+
+        assignForm.add(partnerCombo, feeField, deadlinePicker);
+
+        Button assignBtn = new Button("Partner zuweisen", VaadinIcon.USER_CHECK.create(), e -> {
+            if (partnerCombo.getValue() == null || feeField.getValue() == null || deadlinePicker.getValue() == null) {
+                Notification.show("Bitte alle Felder ausfüllen").addThemeVariants(NotificationVariant.LUMO_WARNING);
+                return;
+            }
+            String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
+            OffsetDateTime deadline = OffsetDateTime.of(deadlinePicker.getValue(), LocalTime.MAX, ZoneOffset.UTC);
+
+            orderService.assignPartnerToOrder(order, partnerCombo.getValue(), BigDecimal.valueOf(feeField.getValue()), deadline, username);
+            Notification.show("Partner erfolgreich zugewiesen").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            refreshPartnerTab();
+            refreshDetailsTab();
+        });
+        assignBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        panel.add(formTitle, assignForm, assignBtn);
+        return panel;
+    }
+
+    private void setupNotesTab() {
+        notesLayout = new VerticalLayout();
+        notesLayout.setSizeFull();
+        notesLayout.setPadding(false);
+        notesLayout.setSpacing(true);
+        refreshNotesTab();
+    }
+
+    private void refreshNotesTab() {
+        if (notesLayout == null) {
+            return;
+        }
+
+        notesLayout.removeAll();
+
+        H3 title = new H3("Mitarbeiter-Notizen");
+        title.addClassNames("m-0");
+
+        TextArea noteInput = new TextArea("Neue Notiz");
+        noteInput.setWidthFull();
+        noteInput.setMinHeight("120px");
+        noteInput.setPlaceholder("Interne Notiz fuer das Team...");
+
+        Button saveBtn = new Button("Notiz speichern", VaadinIcon.CHECK.create(), e -> {
+            String body = noteInput.getValue() != null ? noteInput.getValue().trim() : "";
+            if (body.isEmpty()) {
+                Notification.show("Bitte eine Notiz eingeben").addThemeVariants(NotificationVariant.LUMO_WARNING);
+                return;
+            }
+
+            UserAccount account = securityService.getAuthenticatedUserAccount().orElse(null);
+            String username = account != null ? account.getUsername() : getCurrentUsername();
+            String authorName = account != null ? account.getFullName() : username;
+
+            orderNoteService.addNote(order.getId(), body, username, authorName);
+            noteInput.clear();
+            refreshNotesTab();
+            Notification.show("Notiz gespeichert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        });
+        saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        HorizontalLayout composer = new HorizontalLayout(noteInput, saveBtn);
+        composer.setWidthFull();
+        composer.setPadding(false);
+        composer.setSpacing(true);
+        composer.setAlignItems(com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.END);
+        composer.expand(noteInput);
+
+        VerticalLayout noteList = new VerticalLayout();
+        noteList.setWidthFull();
+        noteList.setPadding(false);
+        noteList.setSpacing(true);
+
+        List<OrderNote> notes = orderNoteService.getNotesForOrder(order.getId());
+        if (notes.isEmpty()) {
+            Span empty = new Span("Noch keine Notizen vorhanden.");
+            empty.getStyle().set("color", "var(--lumo-secondary-text-color)");
+            noteList.add(empty);
+        } else {
+            notes.forEach(note -> noteList.add(buildNoteCard(note)));
+        }
+
+        notesLayout.add(title, composer, noteList);
+    }
+
+    private Div buildNoteCard(OrderNote note) {
+        Div card = new Div();
+        card.getStyle().set("border", "1px solid var(--app-panel-border)");
+        card.getStyle().set("border-radius", "4px");
+        card.getStyle().set("padding", "12px");
+        card.getStyle().set("background", "var(--app-panel-bg)");
+
+        Avatar avatar = new Avatar(note.getAuthorName());
+        avatar.setName(note.getAuthorName());
+
+        Span author = new Span(note.getAuthorName());
+        author.getStyle().set("font-weight", "600");
+        author.getStyle().set("display", "block");
+
+        Span time = new Span(note.getCreatedAt() != null
+                ? note.getCreatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+                : "-");
+        time.getStyle().set("font-size", "var(--lumo-font-size-s)");
+        time.getStyle().set("color", "var(--lumo-secondary-text-color)");
+
+        VerticalLayout meta = new VerticalLayout(author, time);
+        meta.setPadding(false);
+        meta.setSpacing(false);
+
+        HorizontalLayout header = new HorizontalLayout(avatar, meta);
+        header.setAlignItems(com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.CENTER);
+        header.setSpacing(true);
+        header.setPadding(false);
+        header.setWidthFull();
+        header.expand(meta);
+
+        Span body = new Span(note.getBody());
+        body.getStyle().set("white-space", "pre-wrap");
+        body.getStyle().set("display", "block");
+        body.getStyle().set("margin-top", "8px");
+
+        card.add(header, body);
+        return card;
+    }
+
+    private String getCurrentUsername() {
+        return securityService.getAuthenticatedUser()
+                .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
+                .orElse("system");
+    }
+
+    private TextField readOnlyField(String label, String value) {
+        TextField field = new TextField(label);
+        field.setValue(value != null ? value : "-");
+        field.setReadOnly(true);
+        field.setWidthFull();
+        return field;
     }
 
     private void setupFilesTab() {

@@ -11,6 +11,15 @@ import java.util.UUID;
 public interface TranslationOrderRepository extends JpaRepository<TranslationOrder, UUID> {
     List<TranslationOrder> findByTenantIdAndDeletedAtIsNull(UUID tenantId);
 
+    @org.springframework.data.jpa.repository.Query("SELECT DISTINCT o FROM TranslationOrder o " +
+            "LEFT JOIN FETCH o.customer " +
+            "LEFT JOIN FETCH o.items i " +
+            "LEFT JOIN FETCH i.sourceLanguage " +
+            "LEFT JOIN FETCH i.targetLanguage " +
+            "LEFT JOIN FETCH i.assignedPartner " +
+            "WHERE o.id = :id")
+    java.util.Optional<TranslationOrder> findDetailById(@org.springframework.data.repository.query.Param("id") UUID id);
+
     @org.springframework.data.jpa.repository.Query(value = "SELECT o FROM TranslationOrder o " +
             "LEFT JOIN FETCH o.customer " +
             "LEFT JOIN FETCH o.quote " +

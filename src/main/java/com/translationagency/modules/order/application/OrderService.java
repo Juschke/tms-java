@@ -60,20 +60,7 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public java.util.Optional<TranslationOrder> getOrderById(UUID orderId) {
-        return orderRepository.findById(orderId).map(order -> {
-            order.getItems().forEach(item -> {
-                if (item.getSourceLanguage() != null) {
-                    item.getSourceLanguage().getName();
-                }
-                if (item.getTargetLanguage() != null) {
-                    item.getTargetLanguage().getName();
-                }
-                if (item.getAssignedPartner() != null) {
-                    item.getAssignedPartner().getFullName();
-                }
-            });
-            return order;
-        });
+        return orderRepository.findDetailById(orderId);
     }
 
     public TranslationOrder saveOrder(TranslationOrder order) {

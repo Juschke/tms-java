@@ -16,6 +16,15 @@ import java.util.UUID;
 @Transactional
 public class NumberRangeService {
 
+    private static final List<String> DEFAULT_ENTITY_TYPES = List.of(
+            "offer",
+            "order",
+            "invoice",
+            "vendor_invoice",
+            "customer",
+            "partner"
+    );
+
     private final NumberRangeRepository numberRangeRepository;
     private final TenantRepository tenantRepository;
 
@@ -50,13 +59,9 @@ public class NumberRangeService {
     /**
      * Preview the next number without incrementing.
      */
-    @Transactional(readOnly = true)
     public String previewNextNumber(UUID tenantId, String entityType) {
-        Optional<NumberRange> optRange = numberRangeRepository.findByTenantIdAndEntityType(tenantId, entityType);
-        if (optRange.isEmpty()) {
-            return "DEFAULT-1";
-        }
-        NumberRange range = optRange.get();
+        NumberRange range = numberRangeRepository.findByTenantIdAndEntityType(tenantId, entityType)
+                .orElseGet(() -> createDefaultRange(tenantId, entityType));
 
         LocalDate now = LocalDate.now();
         int currentYear = now.getYear();
@@ -69,13 +74,21 @@ public class NumberRangeService {
         return formatNumber(range, val + range.getIncrement(), now);
     }
 
-    @Transactional(readOnly = true)
     public List<NumberRange> getRangesForTenant(UUID tenantId) {
+        ensureDefaultRanges(tenantId);
         return numberRangeRepository.findByTenantId(tenantId);
     }
 
     public NumberRange saveRange(NumberRange range) {
         return numberRangeRepository.save(range);
+    }
+
+    private void ensureDefaultRanges(UUID tenantId) {
+        for (String entityType : DEFAULT_ENTITY_TYPES) {
+            if (numberRangeRepository.findByTenantIdAndEntityType(tenantId, entityType).isEmpty()) {
+                createDefaultRange(tenantId, entityType);
+            }
+        }
     }
 
     private String formatNumber(NumberRange range, int value, LocalDate date) {
@@ -120,6 +133,15 @@ public class NumberRangeService {
     private NumberRange createDefaultRange(UUID tenantId, String entityType) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
+
+        return createDefaultRange(tenant, entityType);
+    }
+
+    private NumberRange createDefaultRange(Tenant tenant, String entityType) {
+        Optional<NumberRange> existing = numberRangeRepository.findByTenantIdAndEntityType(tenant.getId(), entityType);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
 
         NumberRange range = new NumberRange();
         range.setId(UUID.randomUUID());
