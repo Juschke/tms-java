@@ -9,7 +9,10 @@ import java.util.UUID;
 
 @Repository
 public interface TranslationOrderRepository extends JpaRepository<TranslationOrder, UUID> {
-    List<TranslationOrder> findByTenantIdAndDeletedAtIsNull(UUID tenantId);
+    @org.springframework.data.jpa.repository.Query("SELECT o FROM TranslationOrder o " +
+            "LEFT JOIN FETCH o.customer " +
+            "WHERE o.tenant.id = :tenantId AND o.deletedAt IS NULL")
+    List<TranslationOrder> findByTenantIdAndDeletedAtIsNull(@org.springframework.data.repository.query.Param("tenantId") UUID tenantId);
 
     @org.springframework.data.jpa.repository.Query("SELECT DISTINCT o FROM TranslationOrder o " +
             "LEFT JOIN FETCH o.customer " +
@@ -21,21 +24,23 @@ public interface TranslationOrderRepository extends JpaRepository<TranslationOrd
     java.util.Optional<TranslationOrder> findDetailById(@org.springframework.data.repository.query.Param("id") UUID id);
 
     @org.springframework.data.jpa.repository.Query(value = "SELECT o FROM TranslationOrder o " +
-            "LEFT JOIN FETCH o.customer " +
+            "LEFT JOIN FETCH o.customer c " +
             "LEFT JOIN FETCH o.quote " +
             "WHERE o.tenant.id = :tenantId AND o.deletedAt IS NULL " +
             "AND (:search IS NULL OR :search = '' OR " +
             "     LOWER(o.orderNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "     LOWER(o.customer.companyName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "     LOWER(c.companyName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:orderNumber IS NULL OR :orderNumber = '' OR LOWER(o.orderNumber) LIKE LOWER(CONCAT('%', :orderNumber, '%'))) " +
-            "AND (:customerName IS NULL OR :customerName = '' OR LOWER(o.customer.companyName) LIKE LOWER(CONCAT('%', :customerName, '%'))) " +
+            "AND (:customerName IS NULL OR :customerName = '' OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', :customerName, '%'))) " +
             "AND (:status IS NULL OR o.status = :status)",
-            countQuery = "SELECT count(o) FROM TranslationOrder o WHERE o.tenant.id = :tenantId AND o.deletedAt IS NULL " +
+            countQuery = "SELECT count(o) FROM TranslationOrder o " +
+            "LEFT JOIN o.customer c " +
+            "WHERE o.tenant.id = :tenantId AND o.deletedAt IS NULL " +
             "AND (:search IS NULL OR :search = '' OR " +
             "     LOWER(o.orderNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "     LOWER(o.customer.companyName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "     LOWER(c.companyName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "AND (:orderNumber IS NULL OR :orderNumber = '' OR LOWER(o.orderNumber) LIKE LOWER(CONCAT('%', :orderNumber, '%'))) " +
-            "AND (:customerName IS NULL OR :customerName = '' OR LOWER(o.customer.companyName) LIKE LOWER(CONCAT('%', :customerName, '%'))) " +
+            "AND (:customerName IS NULL OR :customerName = '' OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', :customerName, '%'))) " +
             "AND (:status IS NULL OR o.status = :status)")
     org.springframework.data.domain.Page<TranslationOrder> findFiltered(
             @org.springframework.data.repository.query.Param("tenantId") UUID tenantId,
