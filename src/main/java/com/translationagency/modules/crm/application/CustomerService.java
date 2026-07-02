@@ -4,6 +4,7 @@ import com.translationagency.modules.crm.domain.ContactPerson;
 import com.translationagency.modules.crm.domain.Customer;
 import com.translationagency.modules.crm.infrastructure.ContactPersonRepository;
 import com.translationagency.modules.crm.infrastructure.CustomerRepository;
+import com.translationagency.modules.tenant.application.NumberRangeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,10 +18,14 @@ public class CustomerService {
 
     private final CustomerRepository customerRepository;
     private final ContactPersonRepository contactPersonRepository;
+    private final NumberRangeService numberRangeService;
 
-    public CustomerService(CustomerRepository customerRepository, ContactPersonRepository contactPersonRepository) {
+    public CustomerService(CustomerRepository customerRepository,
+                           ContactPersonRepository contactPersonRepository,
+                           NumberRangeService numberRangeService) {
         this.customerRepository = customerRepository;
         this.contactPersonRepository = contactPersonRepository;
+        this.numberRangeService = numberRangeService;
     }
 
     @Transactional(readOnly = true)
@@ -59,6 +64,13 @@ public class CustomerService {
     }
 
     public Customer saveCustomer(Customer customer) {
+        // Kundennummer nur bei Neuanlage automatisch fortlaufend vergeben;
+        // bestehende Nummern bleiben unveraendert.
+        if ((customer.getCustomerNumber() == null || customer.getCustomerNumber().isBlank())
+                && customer.getTenant() != null) {
+            customer.setCustomerNumber(
+                    numberRangeService.getNextNumber(customer.getTenant().getId(), "customer"));
+        }
         return customerRepository.save(customer);
     }
 

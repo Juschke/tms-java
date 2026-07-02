@@ -27,6 +27,9 @@ public class Partner {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
+    @Column(name = "partner_number", length = 50)
+    private String partnerNumber;
+
     @Column(name = "company_name")
     private String companyName;
 
