@@ -3,6 +3,7 @@ package com.translationagency.modules.partner.ui;
 import com.translationagency.modules.partner.application.PartnerService;
 import com.translationagency.modules.partner.domain.Partner;
 import com.translationagency.shared.ui.BaseEnterpriseGrid;
+import com.translationagency.shared.ui.StatusBadge;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.grid.HeaderRow;
 import org.springframework.data.domain.Page;
@@ -16,6 +17,7 @@ public class PartnerEnterpriseGrid extends BaseEnterpriseGrid<Partner> {
     private final PartnerService partnerService;
     private final UUID           tenantId;
 
+    private com.vaadin.flow.component.grid.Grid.Column<Partner> numberCol;
     private com.vaadin.flow.component.grid.Grid.Column<Partner> firstNameCol;
     private com.vaadin.flow.component.grid.Grid.Column<Partner> lastNameCol;
     private com.vaadin.flow.component.grid.Grid.Column<Partner> emailCol;
@@ -90,10 +92,16 @@ public class PartnerEnterpriseGrid extends BaseEnterpriseGrid<Partner> {
 
     @Override
     protected void configureColumns() {
+        numberCol    = addSortableTextColumn(Partner::getPartnerNumber, "Nr.", "partnerNumber");
         firstNameCol = addSortableTextColumn(Partner::getFirstName, "Vorname", "firstName");
         lastNameCol  = addSortableTextColumn(Partner::getLastName, "Nachname", "lastName");
         emailCol     = addSortableTextColumn(Partner::getEmail, "E-Mail", "email");
         classCol     = addSortableTextColumn(Partner::getClassification, "Einstufung", "classification");
+
+        addComponentColumn(p -> p.isActive()
+                        ? StatusBadge.create("Aktiv", StatusBadge.Tone.SUCCESS)
+                        : StatusBadge.create("Inaktiv", StatusBadge.Tone.NEUTRAL),
+                "Status");
     }
 
     @Override

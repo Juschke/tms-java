@@ -13,12 +13,38 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @Transactional
 public class OrderService {
+
+    /**
+     * Erlaubte Statusuebergaenge (Statusmaschine). Verhindert ungueltige Spruenge
+     * und haelt die Geschaeftslogik zentral im Service statt in der UI.
+     * CANCELLED ist aus fast jedem aktiven Status erreichbar (siehe canCancel).
+     */
+    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = buildTransitions();
+
+    private static Map<OrderStatus, Set<OrderStatus>> buildTransitions() {
+        Map<OrderStatus, Set<OrderStatus>> m = new EnumMap<>(OrderStatus.class);
+        m.put(OrderStatus.CREATED, EnumSet.of(OrderStatus.ASSIGNED, OrderStatus.IN_PROGRESS, OrderStatus.CANCELLED));
+        m.put(OrderStatus.ASSIGNED, EnumSet.of(OrderStatus.IN_PROGRESS, OrderStatus.CANCELLED));
+        m.put(OrderStatus.IN_PROGRESS, EnumSet.of(OrderStatus.QA_READY, OrderStatus.READY_FOR_DELIVERY, OrderStatus.CANCELLED));
+        m.put(OrderStatus.QA_READY, EnumSet.of(OrderStatus.READY_FOR_DELIVERY, OrderStatus.IN_PROGRESS, OrderStatus.CANCELLED));
+        m.put(OrderStatus.READY_FOR_DELIVERY, EnumSet.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED));
+        m.put(OrderStatus.DELIVERED, EnumSet.of(OrderStatus.INVOICED, OrderStatus.READY_FOR_DELIVERY));
+        m.put(OrderStatus.INVOICED, EnumSet.of(OrderStatus.PAID, OrderStatus.DELIVERED));
+        m.put(OrderStatus.PAID, EnumSet.of(OrderStatus.ARCHIVED));
+        m.put(OrderStatus.ARCHIVED, EnumSet.noneOf(OrderStatus.class));
+        m.put(OrderStatus.CANCELLED, EnumSet.of(OrderStatus.CREATED));
+        return m;
+    }
 
     private final TranslationOrderRepository orderRepository;
     private final PartnerAssignmentRepository partnerAssignmentRepository;
@@ -170,5 +196,72 @@ public class OrderService {
         BigDecimal vatAmount = netAmount.multiply(vatPercent).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
         order.setVatAmount(vatAmount);
         order.setGrossAmount(netAmount.add(vatAmount));
+    }
+
+    // =========================================================
+    // Statusmaschine – zentrale, validierte Statusuebergaenge
+    // =========================================================
+
+    /** Prueft, ob ein Uebergang vom aktuellen in den Zielstatus erlaubt ist. */
+    public boolean canTransition(OrderStatus from, OrderStatus to) {
+        if (from == null || to == null) return false;
+        return ALLOWED_TRANSITIONS.getOrDefault(from, Set.of()).contains(to);
+    }
+
+    /** Storno ist aus jedem aktiven Status ausser bereits abgeschlossenen moeglich. */
+    public boolean canCancel(TranslationOrder order) {
+        if (order == null || order.getStatus() == null) return false;
+        OrderStatus s = order.getStatus();
+        return s != OrderStatus.CANCELLED && s != OrderStatus.ARCHIVED
+                && s != OrderStatus.PAID && s != OrderStatus.INVOICED;
+    }
+
+    /** Lieferung ist nur aus READY_FOR_DELIVERY sinnvoll. */
+    public boolean canDeliver(TranslationOrder order) {
+        return order != null && order.getStatus() == OrderStatus.READY_FOR_DELIVERY;
+    }
+
+    /**
+     * Fuehrt einen validierten Statuswechsel durch.
+     *
+     * @throws IllegalStateException wenn der Uebergang nicht erlaubt ist.
+     */
+    public TranslationOrder changeStatus(UUID orderId, OrderStatus target, String username) {
+        TranslationOrder order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Auftrag nicht gefunden: " + orderId));
+
+        if (order.getStatus() == target) {
+            return order; // idempotent
+        }
+        if (!canTransition(order.getStatus(), target)) {
+            throw new IllegalStateException(
+                    "Statuswechsel von " + order.getStatus() + " zu " + target + " ist nicht erlaubt.");
+        }
+        order.setStatus(target);
+        order.setUpdatedBy(username);
+        return orderRepository.save(order);
+    }
+
+    /** Storniert einen Auftrag (mit Statuspruefung). */
+    public TranslationOrder cancelOrder(UUID orderId, String username) {
+        TranslationOrder order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Auftrag nicht gefunden: " + orderId));
+        if (!canCancel(order)) {
+            throw new IllegalStateException(
+                    "Auftrag im Status " + order.getStatus() + " kann nicht storniert werden.");
+        }
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setUpdatedBy(username);
+        return orderRepository.save(order);
+    }
+
+    /** Markiert einen lieferbereiten Auftrag als geliefert. */
+    public TranslationOrder markAsDelivered(UUID orderId, String username) {
+        return changeStatus(orderId, OrderStatus.DELIVERED, username);
+    }
+
+    /** Reaktiviert einen stornierten Auftrag (zurueck auf CREATED). */
+    public TranslationOrder reopenOrder(UUID orderId, String username) {
+        return changeStatus(orderId, OrderStatus.CREATED, username);
     }
 }

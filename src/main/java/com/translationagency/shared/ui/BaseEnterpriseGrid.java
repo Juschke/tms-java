@@ -33,6 +33,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * Abstract, reusable Enterprise Grid component for Spring Boot &amp; Vaadin B2B applications.
@@ -273,8 +274,11 @@ public abstract class BaseEnterpriseGrid<T> extends VerticalLayout {
             MenuItem deleteItem = menu.addItem("🗑\uFE0F  Löschen", e -> deleteAction.accept(item));
             deleteItem.addClassName(P + "-menu-delete");
         }
+        // Statusabhaengige Zusatzaktionen: nur einblenden, wenn ihre Bedingung zutrifft.
         for (ActionEntry<T> entry : extraActions) {
-            menu.addItem(entry.label(), e -> entry.action().accept(item));
+            if (entry.visibleWhen().test(item)) {
+                menu.addItem(entry.label(), e -> entry.action().accept(item));
+            }
         }
     }
 
@@ -325,7 +329,19 @@ public abstract class BaseEnterpriseGrid<T> extends VerticalLayout {
      * @param action Called with the row's entity when the item is clicked.
      */
     public void addContextMenuAction(String label, Consumer<T> action) {
-        extraActions.add(new ActionEntry<>(label, action));
+        extraActions.add(new ActionEntry<>(label, action, item -> true));
+    }
+
+    /**
+     * Appends a context-menu item that is only shown for rows matching {@code visibleWhen}.
+     * Enables status-dependent actions, e.g. "Stornieren" only for non-cancelled orders.
+     *
+     * @param label       Display label (emoji + text is fine).
+     * @param visibleWhen Predicate deciding per row whether the item appears.
+     * @param action      Called with the row's entity when the item is clicked.
+     */
+    public void addContextMenuAction(String label, Predicate<T> visibleWhen, Consumer<T> action) {
+        extraActions.add(new ActionEntry<>(label, action, visibleWhen));
     }
 
     /** Reloads the current page from the backend. */
@@ -489,8 +505,29 @@ public abstract class BaseEnterpriseGrid<T> extends VerticalLayout {
      * @param <E>       The filter value type (usually an enum).
      */
     protected <E> void addComboBoxFilter(Grid.Column<T> column, List<E> items, Consumer<E> onChange) {
+        addComboBoxFilterInternal(column, items, null, onChange);
+    }
+
+    /**
+     * ComboBox filter with a display-label generator so enum values can be shown
+     * with human-readable, localized text.
+     *
+     * @param labelGenerator Maps each item to its display label; {@code null} = default toString.
+     */
+    protected <E> void addComboBoxFilter(Grid.Column<T> column, List<E> items,
+                                         com.vaadin.flow.function.SerializableFunction<E, String> labelGenerator,
+                                         Consumer<E> onChange) {
+        addComboBoxFilterInternal(column, items, labelGenerator, onChange);
+    }
+
+    private <E> void addComboBoxFilterInternal(Grid.Column<T> column, List<E> items,
+                                               com.vaadin.flow.function.SerializableFunction<E, String> labelGenerator,
+                                               Consumer<E> onChange) {
         ComboBox<E> box = new ComboBox<>();
         box.setItems(items);
+        if (labelGenerator != null) {
+            box.setItemLabelGenerator(labelGenerator::apply);
+        }
         box.setPlaceholder("Alle");
         box.setClearButtonVisible(true);
         box.addClassName(P + "-filter-field");
@@ -713,6 +750,6 @@ public abstract class BaseEnterpriseGrid<T> extends VerticalLayout {
     // Inner Types
     // =========================================================
 
-    /** Immutable record holding a custom context-menu entry. */
-    private record ActionEntry<T>(String label, Consumer<T> action) {}
+    /** Immutable record holding a custom context-menu entry with a per-row visibility predicate. */
+    private record ActionEntry<T>(String label, Consumer<T> action, Predicate<T> visibleWhen) {}
 }

@@ -15,7 +15,10 @@ import java.util.UUID;
 @Repository
 public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
-    List<Invoice> findByTenantIdAndDeletedAtIsNull(UUID tenantId);
+    @Query("SELECT i FROM Invoice i " +
+            "LEFT JOIN FETCH i.customer " +
+            "WHERE i.tenant.id = :tenantId AND i.deletedAt IS NULL")
+    List<Invoice> findByTenantIdAndDeletedAtIsNull(@Param("tenantId") UUID tenantId);
 
     /**
      * Filtered, paginated invoice query.

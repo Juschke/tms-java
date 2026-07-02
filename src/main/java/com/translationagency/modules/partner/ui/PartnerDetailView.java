@@ -142,7 +142,13 @@ public class PartnerDetailView extends VerticalLayout implements HasUrlParameter
         masterDataLayout.setPadding(true);
 
         FormLayout formLayout = new FormLayout();
-        
+
+        // Partnernummer (read-only, wird automatisch fortlaufend vergeben)
+        TextField partnerNumber = new TextField("Partnernummer");
+        partnerNumber.setReadOnly(true);
+        partnerNumber.setValue(partner.getPartnerNumber() != null && !partner.getPartnerNumber().isBlank()
+                ? partner.getPartnerNumber() : "wird automatisch vergeben");
+
         // Firma / Organisation
         TextField companyName = new TextField("Firma");
         TextField organization = new TextField("Organisation");
@@ -166,6 +172,7 @@ public class PartnerDetailView extends VerticalLayout implements HasUrlParameter
         classification.setItems("extern", "intern", "premium");
 
         formLayout.add(
+                partnerNumber,
                 new H3("Firma / Organisation"), companyName, organization, organizationUnit,
                 new H3("Personendaten"), salutation, pTitle, firstName, lastName, displayName,
                 new H3("Status & Einstufung"), isTranslator, isInterpreter, isActive, isRecommended, classification

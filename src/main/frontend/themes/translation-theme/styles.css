@@ -602,6 +602,13 @@ vaadin-context-menu-item:hover {
 .status-badge.draft    { background: #e2e3e5; color: #383d41; border: 1px solid #adb5bd; }
 .status-badge.paid     { background: #d1ecf1; color: #0c5460; border: 1px solid #17a2b8; }
 
+/* Semantische Toene fuer die wiederverwendbare StatusBadge-Komponente */
+.status-badge.tone-neutral { background: #e2e3e5; color: #383d41; border: 1px solid #adb5bd; }
+.status-badge.tone-info    { background: #d1ecf1; color: #0c5460; border: 1px solid #17a2b8; }
+.status-badge.tone-success { background: #d4edda; color: #155724; border: 1px solid #28a745; }
+.status-badge.tone-warning { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+.status-badge.tone-danger  { background: #f8d7da; color: #721c24; border: 1px solid #dc3545; }
+
 /* ---- Disabled input appearance (readonly fields like in screenshots) ---- */
 .field-disabled,
 [readonly] {

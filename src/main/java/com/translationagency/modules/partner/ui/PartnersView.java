@@ -127,9 +127,11 @@ public class PartnersView extends VerticalLayout {
                 partnerService.savePartner(partner);
                 dialog.close();
                 updateList();
-                Notification.show("Partner erfolgreich gespeichert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                com.translationagency.shared.ui.Notifications.success(
+                        "Partner " + (partner.getPartnerNumber() != null ? partner.getPartnerNumber() + " " : "")
+                                + "erfolgreich gespeichert");
             } catch (Exception ex) {
-                Notification.show("Fehler beim Speichern: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                com.translationagency.shared.ui.Notifications.error("Fehler beim Speichern: " + ex.getMessage());
             }
         });
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);

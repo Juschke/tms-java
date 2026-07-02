@@ -5,30 +5,22 @@ import com.translationagency.modules.pricing.application.PricingService;
 import com.translationagency.modules.pricing.domain.Language;
 import com.translationagency.modules.partner.application.PartnerService;
 import com.translationagency.modules.partner.domain.Partner;
+import com.translationagency.shared.ui.ToggleDateTimeField;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
-import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.component.orderedlayout.FlexComponent;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.BigDecimalField;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
-import com.vaadin.flow.data.converter.Converter;
-import com.vaadin.flow.data.binder.Result;
-import com.vaadin.flow.data.binder.ValueContext;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -50,9 +42,10 @@ public class TeilauftragDialog extends Dialog {
         this.onSave = onSave;
 
         setHeaderTitle(item.getId() == null ? "Teilauftrag hinzufügen" : "Teilauftrag bearbeiten");
-        setWidth("1000px");
-
-        FormLayout formLayout = new FormLayout();
+        setWidth("1200px");
+        setMaxWidth("95vw");
+        setHeight("auto");
+        setMaxHeight("92vh");
 
         // 1. Allgemeine Informationen
         ComboBox<Language> sourceLang = new ComboBox<>("Ausgangssprache");
@@ -75,46 +68,17 @@ public class TeilauftragDialog extends Dialog {
         translator.setItems(partnerService.getAllPartners(tenantId));
         translator.setItemLabelGenerator(Partner::getFullName);
 
-        // 3. Status Sektion
-        Checkbox isAssignedCb = new Checkbox("Zuteilung am");
-        DateTimePicker assignedAtPicker = new DateTimePicker();
-        HorizontalLayout assignedLayout = createToggleDate(isAssignedCb, assignedAtPicker);
+        // 3. Status & Termine – universelles Checkbox+Datum+Uhrzeit-Feld
+        ToggleDateTimeField assignedField = new ToggleDateTimeField("Zuteilung am");
+        ToggleDateTimeField deadlineField = new ToggleDateTimeField("Termin");
+        ToggleDateTimeField completedField = new ToggleDateTimeField("Erledigt");
+        ToggleDateTimeField cancelledField = new ToggleDateTimeField("Storniert");
 
-        Checkbox hasDeadlineCb = new Checkbox("Termin");
-        DateTimePicker deadlineAtPicker = new DateTimePicker();
-        HorizontalLayout deadlineLayout = createToggleDate(hasDeadlineCb, deadlineAtPicker);
-
-        Checkbox isCompletedCb = new Checkbox("Erledigt");
-        DateTimePicker completedAtPicker = new DateTimePicker();
-        HorizontalLayout completedLayout = createToggleDate(isCompletedCb, completedAtPicker);
-
-        Checkbox isCancelledCb = new Checkbox("Storniert");
-        DateTimePicker cancelledAtPicker = new DateTimePicker();
-        HorizontalLayout cancelledDateLayout = createToggleDate(isCancelledCb, cancelledAtPicker);
-        
         ComboBox<String> cancellationReason = new ComboBox<>("Stornogrund");
         cancellationReason.setItems("Kunde hat storniert", "Übersetzer abgesprungen", "Falsche Sprachen", "Sonstiges");
         cancellationReason.setAllowCustomValue(true);
-        cancellationReason.addCustomValueSetListener(e -> {
-            cancellationReason.setValue(e.getDetail());
-        });
-        cancellationReason.setEnabled(isCancelledCb.getValue());
-        isCancelledCb.addValueChangeListener(e -> cancellationReason.setEnabled(e.getValue()));
-
-        HorizontalLayout cancelledLayout = new HorizontalLayout(cancelledDateLayout, cancellationReason);
-        cancelledLayout.setAlignItems(FlexComponent.Alignment.BASELINE);
-
-        TextField createdAtField = new TextField("Erstellt");
-        createdAtField.setReadOnly(true);
-        if (item.getCreatedAt() != null) {
-            createdAtField.setValue(item.getCreatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")));
-        }
-
-        TextField updatedAtField = new TextField("Zuletzt bearbeitet");
-        updatedAtField.setReadOnly(true);
-        if (item.getUpdatedAt() != null) {
-            updatedAtField.setValue(item.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")));
-        }
+        cancellationReason.addCustomValueSetListener(e -> cancellationReason.setValue(e.getDetail()));
+        cancellationReason.setWidthFull();
 
         // 4. Umfang
         ComboBox<String> unit = new ComboBox<>("Einheit");
@@ -129,13 +93,8 @@ public class TeilauftragDialog extends Dialog {
         BigDecimalField totalPriceField = new BigDecimalField("Gesamtpreis (€)");
         totalPriceField.setReadOnly(true);
 
-        Checkbox invoiceReceivedCb = new Checkbox("Rechnungseingang");
-        DateTimePicker invoiceReceivedAtPicker = new DateTimePicker();
-        HorizontalLayout invoiceReceivedLayout = createToggleDate(invoiceReceivedCb, invoiceReceivedAtPicker);
-
-        Checkbox isPaidCb = new Checkbox("Ausgezahlt am");
-        DateTimePicker paidAtPicker = new DateTimePicker();
-        HorizontalLayout paidLayout = createToggleDate(isPaidCb, paidAtPicker);
+        ToggleDateTimeField invoiceReceivedField = new ToggleDateTimeField("Rechnungseingang");
+        ToggleDateTimeField paidField = new ToggleDateTimeField("Ausgezahlt am");
 
         // Calculation Logic
         Runnable calculateTotal = () -> {
@@ -166,41 +125,68 @@ public class TeilauftragDialog extends Dialog {
         unitPrice.addValueChangeListener(e -> calculateTotal.run());
         surchargeOrDiscount.addValueChangeListener(e -> calculateTotal.run());
 
-        // Layout Zusammenbau
-        VerticalLayout statusCol = new VerticalLayout(
-            new H3("Status"),
-            assignedLayout,
-            deadlineLayout,
-            completedLayout,
-            cancelledLayout,
-            new HorizontalLayout(createdAtField, updatedAtField)
+        // ============================================================
+        // Layout: dicht gepackt, gegliedert nach Bearbeitungsphasen
+        // ============================================================
+
+        // --- 1. AUFTRAG: Was ist zu tun? ---
+        FormLayout auftragForm = twoColForm();
+        auftragForm.add(sourceLang, targetLang, activity, description);
+        auftragForm.setColspan(description, 2);
+
+        // --- 2. UMFANG & PREIS ---
+        FormLayout umfangForm = twoColForm();
+        umfangForm.add(unit, wordCount, pageCount, unitPrice, surchargeOrDiscount, totalPriceField);
+
+        // --- 3. BEARBEITUNG: Wer & bis wann? ---
+        FormLayout bearbeitungForm = twoColForm();
+        bearbeitungForm.add(translator);
+        bearbeitungForm.setColspan(translator, 2);
+        bearbeitungForm.add(assignedField, deadlineField, completedField);
+        bearbeitungForm.setColspan(assignedField, 2);
+        bearbeitungForm.setColspan(deadlineField, 2);
+        bearbeitungForm.setColspan(completedField, 2);
+
+        // --- 4. ABRECHNUNG ---
+        FormLayout abrechnungForm = twoColForm();
+        abrechnungForm.add(invoiceReceivedField, paidField);
+        abrechnungForm.setColspan(invoiceReceivedField, 2);
+        abrechnungForm.setColspan(paidField, 2);
+
+        // --- 5. STORNO (nur relevant, wenn storniert) ---
+        FormLayout stornoForm = twoColForm();
+        stornoForm.add(cancelledField, cancellationReason);
+        stornoForm.setColspan(cancelledField, 2);
+        stornoForm.setColspan(cancellationReason, 2);
+
+        // Zwei-Spalten-Raster ohne Freiraum-Overhead
+        Div grid = new Div(
+            section("Auftrag", auftragForm),
+            section("Umfang & Preis", umfangForm),
+            section("Bearbeitung", bearbeitungForm),
+            section("Abrechnung", abrechnungForm),
+            section("Storno", stornoForm)
         );
-        statusCol.setPadding(false);
+        grid.getStyle().set("display", "grid");
+        grid.getStyle().set("grid-template-columns", "minmax(0, 1fr) minmax(0, 1fr)");
+        grid.getStyle().set("gap", "var(--lumo-space-m)");
+        grid.getStyle().set("width", "100%");
+        grid.getStyle().set("box-sizing", "border-box");
+        grid.getStyle().set("align-items", "start");
 
-        VerticalLayout rightCol = new VerticalLayout(
-            new H3("Zuständigkeit"),
-            translator,
-            statusCol
-        );
-        rightCol.setPadding(false);
+        add(grid);
 
-        VerticalLayout leftCol = new VerticalLayout(
-            new H3("Allgemeine Informationen"),
-            sourceLang, targetLang, activity, description,
-            new H3("Umfang"),
-            new HorizontalLayout(unit, wordCount, pageCount),
-            new H3("Fakturierung"),
-            new HorizontalLayout(unitPrice, surchargeOrDiscount, totalPriceField),
-            new HorizontalLayout(invoiceReceivedLayout, paidLayout)
-        );
-        leftCol.setPadding(false);
-
-        HorizontalLayout mainLayout = new HorizontalLayout(leftCol, rightCol);
-        mainLayout.setWidthFull();
-        mainLayout.setFlexGrow(1, leftCol);
-        mainLayout.setFlexGrow(1, rightCol);
-
-        add(mainLayout);
+        // Dezente Audit-Fusszeile
+        String created = item.getCreatedAt() != null
+                ? item.getCreatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "–";
+        String updated = item.getUpdatedAt() != null
+                ? item.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "–";
+        Span auditInfo = new Span("Erstellt: " + created + "  ·  Zuletzt bearbeitet: " + updated);
+        auditInfo.getStyle().set("font-size", "var(--lumo-font-size-xs)");
+        auditInfo.getStyle().set("color", "var(--lumo-tertiary-text-color)");
+        auditInfo.getStyle().set("margin-top", "var(--lumo-space-s)");
+        auditInfo.getStyle().set("display", "block");
+        add(auditInfo);
 
         // Binder configuration
         binder.forField(sourceLang).asRequired().bind(TranslationOrderItem::getSourceLanguage, TranslationOrderItem::setSourceLanguage);
@@ -215,43 +201,38 @@ public class TeilauftragDialog extends Dialog {
         binder.bind(surchargeOrDiscount, TranslationOrderItem::getSurchargeOrDiscount, TranslationOrderItem::setSurchargeOrDiscount);
         binder.bind(cancellationReason, TranslationOrderItem::getCancellationReason, TranslationOrderItem::setCancellationReason);
 
-        binder.bind(isAssignedCb, TranslationOrderItem::isAssigned, TranslationOrderItem::setAssigned);
-        binder.forField(assignedAtPicker).withConverter(new OffsetDateTimeConverter()).bind(TranslationOrderItem::getAssignedAt, TranslationOrderItem::setAssignedAt);
-        
-        binder.bind(hasDeadlineCb, TranslationOrderItem::isHasDeadline, TranslationOrderItem::setHasDeadline);
-        binder.forField(deadlineAtPicker).withConverter(new OffsetDateTimeConverter()).bind(TranslationOrderItem::getDeadlineAt, TranslationOrderItem::setDeadlineAt);
+        // Termin-Felder: je eine direkte OffsetDateTime-Bindung (Checkbox steckt im Custom Field)
+        binder.forField(assignedField).bind(TranslationOrderItem::getAssignedAt, TranslationOrderItem::setAssignedAt);
+        binder.forField(deadlineField).bind(TranslationOrderItem::getDeadlineAt, TranslationOrderItem::setDeadlineAt);
+        binder.forField(completedField).bind(TranslationOrderItem::getCompletedAt, TranslationOrderItem::setCompletedAt);
+        binder.forField(cancelledField).bind(TranslationOrderItem::getCancelledAt, TranslationOrderItem::setCancelledAt);
+        binder.forField(invoiceReceivedField).bind(TranslationOrderItem::getInvoiceReceivedAt, TranslationOrderItem::setInvoiceReceivedAt);
+        binder.forField(paidField).bind(TranslationOrderItem::getPaidAt, TranslationOrderItem::setPaidAt);
 
-        binder.bind(isCompletedCb, TranslationOrderItem::isCompleted, TranslationOrderItem::setCompleted);
-        binder.forField(completedAtPicker).withConverter(new OffsetDateTimeConverter()).bind(TranslationOrderItem::getCompletedAt, TranslationOrderItem::setCompletedAt);
-
-        binder.bind(isCancelledCb, TranslationOrderItem::isCancelled, TranslationOrderItem::setCancelled);
-        binder.forField(cancelledAtPicker).withConverter(new OffsetDateTimeConverter()).bind(TranslationOrderItem::getCancelledAt, TranslationOrderItem::setCancelledAt);
-
-        binder.bind(invoiceReceivedCb, TranslationOrderItem::isInvoiceReceived, TranslationOrderItem::setInvoiceReceived);
-        binder.forField(invoiceReceivedAtPicker).withConverter(new OffsetDateTimeConverter()).bind(TranslationOrderItem::getInvoiceReceivedAt, TranslationOrderItem::setInvoiceReceivedAt);
-
-        binder.bind(isPaidCb, TranslationOrderItem::isPaid, TranslationOrderItem::setPaid);
-        binder.forField(paidAtPicker).withConverter(new OffsetDateTimeConverter()).bind(TranslationOrderItem::getPaidAt, TranslationOrderItem::setPaidAt);
+        // Stornogrund nur bei aktivem Storno-Feld editierbar
+        cancellationReason.setEnabled(cancelledField.isChecked());
+        cancelledField.addValueChangeListener(e -> cancellationReason.setEnabled(cancelledField.isChecked()));
 
         // Load values
         binder.readBean(item);
         if (item.getWordCount() != null) wordCount.setValue(item.getWordCount());
         if (item.getPageCount() != null) pageCount.setValue(item.getPageCount());
-        
-        // Initial state logic for pickers
-        assignedAtPicker.setEnabled(item.isAssigned());
-        deadlineAtPicker.setEnabled(item.isHasDeadline());
-        completedAtPicker.setEnabled(item.isCompleted());
-        cancelledAtPicker.setEnabled(item.isCancelled());
-        invoiceReceivedAtPicker.setEnabled(item.isInvoiceReceived());
-        paidAtPicker.setEnabled(item.isPaid());
-        
+        cancellationReason.setEnabled(cancelledField.isChecked());
+
         calculateTotal.run();
 
         // Actions
         Button saveBtn = new Button("Übernehmen", e -> {
             try {
                 binder.writeBean(item);
+                // boolean-Flags aus den Custom Fields synchron halten
+                item.setAssigned(assignedField.isChecked());
+                item.setHasDeadline(deadlineField.isChecked());
+                item.setCompleted(completedField.isChecked());
+                item.setCancelled(cancelledField.isChecked());
+                item.setInvoiceReceived(invoiceReceivedField.isChecked());
+                item.setPaid(paidField.isChecked());
+
                 BigDecimal qty = BigDecimal.ONE;
                 if ("WORDS".equals(item.getUnit()) && item.getWordCount() != null) {
                     qty = BigDecimal.valueOf(item.getWordCount());
@@ -260,7 +241,7 @@ public class TeilauftragDialog extends Dialog {
                 }
                 item.setQuantity(qty);
                 item.setTotalPrice(totalPriceField.getValue());
-                
+
                 onSave.accept(item);
                 close();
             } catch (Exception ex) {
@@ -272,31 +253,37 @@ public class TeilauftragDialog extends Dialog {
         getFooter().add(cancelBtn, saveBtn);
     }
 
-    private HorizontalLayout createToggleDate(Checkbox cb, DateTimePicker dtp) {
-        cb.addValueChangeListener(e -> {
-            dtp.setEnabled(e.getValue());
-            if (e.getValue() && dtp.getValue() == null) {
-                dtp.setValue(LocalDateTime.now());
-            } else if (!e.getValue()) {
-                dtp.setValue(null);
-            }
-        });
-        HorizontalLayout layout = new HorizontalLayout(cb, dtp);
-        layout.setAlignItems(FlexComponent.Alignment.CENTER);
-        return layout;
+    /**
+     * Dichtes 2-Spalten-Formular mit engem Spacing – Basis jeder Sektion.
+     */
+    private FormLayout twoColForm() {
+        FormLayout form = new FormLayout();
+        form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 2));
+        form.setWidthFull();
+        form.getStyle().set("box-sizing", "border-box");
+        form.getStyle().set("--vaadin-form-layout-column-spacing", "var(--lumo-space-s)");
+        form.getStyle().set("--vaadin-form-item-row-spacing", "var(--lumo-space-xs)");
+        return form;
     }
 
-    private static class OffsetDateTimeConverter implements Converter<LocalDateTime, OffsetDateTime> {
-        @Override
-        public Result<OffsetDateTime> convertToModel(LocalDateTime localDateTime, ValueContext valueContext) {
-            if (localDateTime == null) return Result.ok(null);
-            return Result.ok(localDateTime.atZone(ZoneId.systemDefault()).toOffsetDateTime());
-        }
+    /**
+     * Kompakte Sektionskarte: weisser Rahmen (.form-panel) mit blauem
+     * Sektionstitel (.section-header). Nutzt bestehende Theme-Klassen.
+     */
+    private Div section(String titleText, Component content) {
+        Div card = new Div();
+        card.addClassName("form-panel");
+        card.getStyle().set("width", "100%");
+        card.getStyle().set("box-sizing", "border-box");
+        card.getStyle().set("min-width", "0");
+        card.getStyle().set("overflow", "hidden");
+        card.getStyle().set("padding", "var(--lumo-space-s) var(--lumo-space-m)");
 
-        @Override
-        public LocalDateTime convertToPresentation(OffsetDateTime offsetDateTime, ValueContext valueContext) {
-            if (offsetDateTime == null) return null;
-            return offsetDateTime.atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
-        }
+        Span header = new Span(titleText);
+        header.addClassName("section-header");
+        header.getStyle().set("display", "block");
+
+        card.add(header, content);
+        return card;
     }
 }

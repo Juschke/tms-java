@@ -440,68 +440,48 @@ public class SettingsView extends VerticalLayout {
         dunningSettingsLayout = new VerticalLayout();
         dunningSettingsLayout.setWidthFull();
         dunningSettingsLayout.setPadding(false);
+        dunningSettingsLayout.setSpacing(true);
 
         DunningSetting dunningSettings = dunningService.getDunningSettings(currentTenant.getId());
         TextTemplate level1Template = settingsService.getOrCreateTextTemplate(currentTenant.getId(), TextTemplateType.DUNNING_LEVEL_1);
         TextTemplate level2Template = settingsService.getOrCreateTextTemplate(currentTenant.getId(), TextTemplateType.DUNNING_LEVEL_2);
         TextTemplate level3Template = settingsService.getOrCreateTextTemplate(currentTenant.getId(), TextTemplateType.DUNNING_LEVEL_3);
 
+        // Globaler Schalter fuer das gesamte Mahnwesen
         Checkbox enabled = new Checkbox("Mahnwesen aktiv");
-        BigDecimalField feePerLevel = new BigDecimalField("Mahngebuehr pro Stufe (EUR)");
-        IntegerField daysLevel1 = new IntegerField("Tage ueberfaellig Stufe 1");
-        IntegerField daysLevel2 = new IntegerField("Tage ueberfaellig Stufe 2");
-        IntegerField daysLevel3 = new IntegerField("Tage ueberfaellig Stufe 3");
-
         enabled.setValue(dunningSettings.isEnabled());
+
+        BigDecimalField feePerLevel = new BigDecimalField("Mahngebuehr pro Stufe (EUR)");
         feePerLevel.setValue(valueOrDefault(dunningSettings.getFeePerLevel(), BigDecimal.valueOf(5.00)));
-        daysLevel1.setValue(dunningSettings.getDaysOverdueLevel1());
-        daysLevel2.setValue(dunningSettings.getDaysOverdueLevel2());
-        daysLevel3.setValue(dunningSettings.getDaysOverdueLevel3());
+        feePerLevel.setHelperText("Gilt einheitlich fuer alle Stufen");
 
-        FormLayout settingsForm = new FormLayout();
-        settingsForm.add(enabled, feePerLevel, daysLevel1, daysLevel2, daysLevel3);
-        settingsForm.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1), new FormLayout.ResponsiveStep("720px", 2));
+        FormLayout globalForm = new FormLayout();
+        globalForm.add(enabled, feePerLevel);
+        globalForm.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1), new FormLayout.ResponsiveStep("720px", 2));
 
-        TextField subjectLevel1 = new TextField("Betreff Stufe 1");
-        TextField subjectLevel2 = new TextField("Betreff Stufe 2");
-        TextField subjectLevel3 = new TextField("Betreff Stufe 3");
-        TextArea bodyLevel1 = new TextArea("Text Stufe 1");
-        TextArea bodyLevel2 = new TextArea("Text Stufe 2");
-        TextArea bodyLevel3 = new TextArea("Text Stufe 3");
-
-        subjectLevel1.setValue(valueOrEmpty(level1Template.getSubject()));
-        subjectLevel2.setValue(valueOrEmpty(level2Template.getSubject()));
-        subjectLevel3.setValue(valueOrEmpty(level3Template.getSubject()));
-        bodyLevel1.setValue(valueOrEmpty(level1Template.getBody()));
-        bodyLevel2.setValue(valueOrEmpty(level2Template.getBody()));
-        bodyLevel3.setValue(valueOrEmpty(level3Template.getBody()));
-
-        bodyLevel1.setMinHeight("180px");
-        bodyLevel2.setMinHeight("180px");
-        bodyLevel3.setMinHeight("180px");
-        bodyLevel1.setPlaceholder("Platzhalter: {kunde}, {rechnungsnummer}, {faelligkeit}");
-        bodyLevel2.setPlaceholder("Platzhalter: {kunde}, {rechnungsnummer}, {faelligkeit}");
-        bodyLevel3.setPlaceholder("Platzhalter: {kunde}, {rechnungsnummer}, {faelligkeit}");
-
-        FormLayout textForm = new FormLayout();
-        textForm.add(subjectLevel1, subjectLevel2, subjectLevel3, bodyLevel1, bodyLevel2, bodyLevel3);
-        textForm.setColspan(bodyLevel1, 2);
-        textForm.setColspan(bodyLevel2, 2);
-        textForm.setColspan(bodyLevel3, 2);
-        textForm.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1), new FormLayout.ResponsiveStep("760px", 2));
+        // Eine Karte je Mahnstufe: Aktiv - Kalkulation - Betreff - Body
+        DunningLevelCard card1 = buildDunningLevelCard(1, "Zahlungserinnerung",
+                dunningSettings.getDaysOverdueLevel1(), level1Template);
+        DunningLevelCard card2 = buildDunningLevelCard(2, "Mahnung Stufe 2",
+                dunningSettings.getDaysOverdueLevel2(), level2Template);
+        DunningLevelCard card3 = buildDunningLevelCard(3, "Letzte Mahnung",
+                dunningSettings.getDaysOverdueLevel3(), level3Template);
 
         Button saveBtn = new Button("Speichern", VaadinIcon.CHECK.create(), e -> {
             dunningSettings.setEnabled(enabled.getValue());
             dunningSettings.setFeePerLevel(valueOrDefault(feePerLevel.getValue(), BigDecimal.ZERO));
-            dunningSettings.setDaysOverdueLevel1(valueOrDefault(daysLevel1.getValue(), 3));
-            dunningSettings.setDaysOverdueLevel2(valueOrDefault(daysLevel2.getValue(), 10));
-            dunningSettings.setDaysOverdueLevel3(valueOrDefault(daysLevel3.getValue(), 20));
+            dunningSettings.setDaysOverdueLevel1(valueOrDefault(card1.days.getValue(), 3));
+            dunningSettings.setDaysOverdueLevel2(valueOrDefault(card2.days.getValue(), 10));
+            dunningSettings.setDaysOverdueLevel3(valueOrDefault(card3.days.getValue(), 20));
             dunningService.saveSettings(dunningSettings);
 
             String username = getCurrentUsername();
-            saveDunningTemplate(level1Template, TextTemplateType.DUNNING_LEVEL_1, "Zahlungserinnerung", subjectLevel1.getValue(), bodyLevel1.getValue(), username);
-            saveDunningTemplate(level2Template, TextTemplateType.DUNNING_LEVEL_2, "Mahnung Stufe 2", subjectLevel2.getValue(), bodyLevel2.getValue(), username);
-            saveDunningTemplate(level3Template, TextTemplateType.DUNNING_LEVEL_3, "Letzte Mahnung", subjectLevel3.getValue(), bodyLevel3.getValue(), username);
+            saveDunningTemplate(level1Template, TextTemplateType.DUNNING_LEVEL_1, "Zahlungserinnerung",
+                    card1.subject.getValue(), card1.body.getValue(), card1.active.getValue(), username);
+            saveDunningTemplate(level2Template, TextTemplateType.DUNNING_LEVEL_2, "Mahnung Stufe 2",
+                    card2.subject.getValue(), card2.body.getValue(), card2.active.getValue(), username);
+            saveDunningTemplate(level3Template, TextTemplateType.DUNNING_LEVEL_3, "Letzte Mahnung",
+                    card3.subject.getValue(), card3.body.getValue(), card3.active.getValue(), username);
 
             refreshTextTemplates();
             Notification.show("Mahneinstellungen gespeichert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
@@ -509,16 +489,76 @@ public class SettingsView extends VerticalLayout {
         saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         H3 dunningHeader = new H3("Mahnwesen");
-        H3 textHeader = new H3("Mahnungstexte");
-        dunningSettingsLayout.add(dunningHeader, settingsForm, textHeader, textForm, saveBtn);
+        dunningSettingsLayout.add(dunningHeader, globalForm,
+                card1.layout, card2.layout, card3.layout, saveBtn);
     }
 
-    private void saveDunningTemplate(TextTemplate template, TextTemplateType type, String name, String subject, String body, String username) {
+    /** Buendelt die Eingabefelder einer Mahnstufe samt zugehoerigem Layout. */
+    private static class DunningLevelCard {
+        final Div layout;
+        final Checkbox active;
+        final IntegerField days;
+        final TextField subject;
+        final TextArea body;
+
+        DunningLevelCard(Div layout, Checkbox active, IntegerField days, TextField subject, TextArea body) {
+            this.layout = layout;
+            this.active = active;
+            this.days = days;
+            this.subject = subject;
+            this.body = body;
+        }
+    }
+
+    /**
+     * Baut eine klar abgegrenzte Karte fuer eine Mahnstufe:
+     * Aktiv-Schalter, Kalkulation (Tage ueberfaellig), Betreff und Body.
+     */
+    private DunningLevelCard buildDunningLevelCard(int level, String levelName, int daysOverdue, TextTemplate template) {
+        Div card = new Div();
+        card.addClassName("form-panel");
+        card.getStyle().set("width", "100%");
+        card.getStyle().set("box-sizing", "border-box");
+        card.getStyle().set("padding", "var(--lumo-space-s) var(--lumo-space-m)");
+
+        Span header = new Span("Stufe " + level + " – " + levelName);
+        header.addClassName("section-header");
+        header.getStyle().set("display", "block");
+
+        Checkbox active = new Checkbox("Stufe aktiv");
+        active.setValue(template.isActive());
+
+        IntegerField days = new IntegerField("Ab Tagen überfällig");
+        days.setValue(daysOverdue);
+        days.setStepButtonsVisible(true);
+        days.setMin(0);
+        days.setHelperText("Frist nach Faelligkeit");
+
+        FormLayout calcForm = new FormLayout();
+        calcForm.add(active, days);
+        calcForm.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1), new FormLayout.ResponsiveStep("500px", 2));
+
+        TextField subject = new TextField("Betreff");
+        subject.setValue(valueOrEmpty(template.getSubject()));
+        subject.setWidthFull();
+
+        TextArea body = new TextArea("Text");
+        body.setValue(valueOrEmpty(template.getBody()));
+        body.setWidthFull();
+        body.setMinHeight("160px");
+        body.setPlaceholder("Platzhalter: {kunde}, {rechnungsnummer}, {faelligkeit}");
+
+        card.add(header, calcForm, subject, body);
+        return new DunningLevelCard(card, active, days, subject, body);
+    }
+
+    private void saveDunningTemplate(TextTemplate template, TextTemplateType type, String name,
+                                     String subject, String body, boolean active, String username) {
         template.setTemplateType(type);
         template.setName(name);
         template.setSubject(valueOrEmpty(subject));
         template.setBody(valueOrEmpty(body));
-        template.setActive(true);
+        template.setActive(active);
         settingsService.saveTextTemplate(template, currentTenant.getId(), username);
     }
 
