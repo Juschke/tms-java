@@ -145,12 +145,11 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
     private void createTabs() {
         Tab detailsTab = new Tab("Auftragsdaten");
         Tab itemsTab = new Tab("Teilaufträge");
-        Tab partnerTab = new Tab("Partnerzuweisung");
         Tab notesTab = new Tab("Notizen");
         Tab filesTab = new Tab("Dokumentenarchiv");
-        Tab billingTab = new Tab("Abrechnung & Finanzen");
+        Tab billingTab = new Tab("Rechnungen");
 
-        tabs.add(detailsTab, itemsTab, partnerTab, notesTab, filesTab, billingTab);
+        tabs.add(detailsTab, itemsTab, notesTab, filesTab, billingTab);
         tabs.addSelectedChangeListener(event -> {
             contentContainer.removeAll();
             if (event.getSelectedTab().equals(detailsTab)) {
@@ -158,9 +157,6 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
             } else if (event.getSelectedTab().equals(itemsTab)) {
                 contentContainer.add(itemsLayout);
                 refreshItemsTab();
-            } else if (event.getSelectedTab().equals(partnerTab)) {
-                contentContainer.add(partnerLayout);
-                refreshPartnerTab();
             } else if (event.getSelectedTab().equals(notesTab)) {
                 contentContainer.add(notesLayout);
                 refreshNotesTab();
@@ -177,7 +173,6 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
     private void setupTabContents() {
         setupDetailsTab();
         setupItemsTab();
-        setupPartnerTab();
         setupNotesTab();
         setupFilesTab();
         setupBillingTab();
@@ -234,95 +229,6 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
         }
     }
 
-    private void setupPartnerTab() {
-        partnerLayout = new VerticalLayout();
-        partnerLayout.setSizeFull();
-        partnerLayout.setPadding(true);
-        refreshPartnerTab();
-    }
-
-    private void refreshPartnerTab() {
-        if (partnerLayout != null && buildPartnerTabContent()) {
-            return;
-        }
-        partnerLayout.removeAll();
-
-        H3 title = new H3("Partnerzuweisungen");
-        partnerLayout.add(title);
-
-        Grid<PartnerAssignment> assignmentGrid = new Grid<>(PartnerAssignment.class, false);
-        assignmentGrid.addColumn(a -> a.getPartner().getFullName()).setHeader("Partner");
-        assignmentGrid.addColumn(a -> a.getFee().toString() + " EUR").setHeader("Honorar");
-        assignmentGrid.addColumn(a -> a.getDeadline() != null ? a.getDeadline().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "-").setHeader("Frist");
-        assignmentGrid.addColumn(a -> a.getStatus().name()).setHeader("Status");
-
-        assignmentGrid.addComponentColumn(assignment -> {
-            HorizontalLayout actionLayout = new HorizontalLayout();
-            if (assignment.getStatus() == PartnerAssignmentStatus.OFFERED) {
-                Button acceptBtn = new Button("Annehmen", e -> {
-                    String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
-                    orderService.updateAssignmentStatus(assignment, PartnerAssignmentStatus.ACCEPTED, username);
-                    Notification.show("Zuweisung akzeptiert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                    refreshPartnerTab();
-                });
-                acceptBtn.addThemeVariants(ButtonVariant.LUMO_SUCCESS, ButtonVariant.LUMO_SMALL);
-                actionLayout.add(acceptBtn);
-            } else if (assignment.getStatus() == PartnerAssignmentStatus.ACCEPTED || assignment.getStatus() == PartnerAssignmentStatus.IN_PROGRESS) {
-                Button submitBtn = new Button("Einreichen", e -> {
-                    String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
-                    orderService.updateAssignmentStatus(assignment, PartnerAssignmentStatus.SUBMITTED, username);
-                    Notification.show("Übersetzung eingereicht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                    refreshPartnerTab();
-                });
-                submitBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
-                actionLayout.add(submitBtn);
-            } else if (assignment.getStatus() == PartnerAssignmentStatus.SUBMITTED) {
-                Button approveBtn = new Button("Freigeben", e -> {
-                    String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
-                    orderService.updateAssignmentStatus(assignment, PartnerAssignmentStatus.APPROVED, username);
-                    Notification.show("Übersetzung freigegeben und abgenommen").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                    refreshPartnerTab();
-                });
-                approveBtn.addThemeVariants(ButtonVariant.LUMO_SUCCESS, ButtonVariant.LUMO_SMALL);
-                actionLayout.add(approveBtn);
-            }
-            return actionLayout;
-        }).setHeader("Aktionen");
-
-        List<PartnerAssignment> assignments = orderService.getAssignmentsForOrder(order.getId());
-        assignmentGrid.setItems(assignments);
-        partnerLayout.add(assignmentGrid);
-
-        // Assignment Form
-        H3 formTitle = new H3("Neuen Partner zuweisen");
-        FormLayout assignForm = new FormLayout();
-
-        ComboBox<Partner> partnerCombo = new ComboBox<>("Partner / Übersetzer");
-        partnerCombo.setItems(partnerService.getAllPartners(tenant.getId()));
-        partnerCombo.setItemLabelGenerator(Partner::getFullName);
-
-        NumberField feeField = new NumberField("Honorar (EUR)");
-        DatePicker deadlinePicker = new DatePicker("Frist");
-
-        assignForm.add(partnerCombo, feeField, deadlinePicker);
-
-        Button assignBtn = new Button("Partner zuweisen", VaadinIcon.USER_CHECK.create(), e -> {
-            if (partnerCombo.getValue() == null || feeField.getValue() == null || deadlinePicker.getValue() == null) {
-                Notification.show("Bitte alle Felder ausfüllen").addThemeVariants(NotificationVariant.LUMO_WARNING);
-                return;
-            }
-            String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
-            OffsetDateTime deadline = OffsetDateTime.of(deadlinePicker.getValue(), LocalTime.MAX, ZoneOffset.UTC);
-            
-            orderService.assignPartnerToOrder(order, partnerCombo.getValue(), BigDecimal.valueOf(feeField.getValue()), deadline, username);
-            Notification.show("Partner erfolgreich zugewiesen").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-            refreshPartnerTab();
-        });
-        assignBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-
-        partnerLayout.add(formTitle, assignForm, assignBtn);
-    }
-
     private boolean buildDetailsTabSplit() {
         detailsLayout.removeAll();
 
@@ -333,7 +239,7 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
         split.setDefaultVerticalComponentAlignment(com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.START);
 
         VerticalLayout customerPanel = createCustomerDetailsPanel();
-        VerticalLayout partnerPanel = createPartnerAssignmentPanel();
+        VerticalLayout partnerPanel = createAssignedPartnerInfoPanel();
 
         customerPanel.getStyle().set("flex", "1 1 0");
         customerPanel.getStyle().set("min-width", "420px");
@@ -342,12 +248,6 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
 
         split.add(customerPanel, partnerPanel);
         detailsLayout.add(split);
-        return true;
-    }
-
-    private boolean buildPartnerTabContent() {
-        partnerLayout.removeAll();
-        partnerLayout.add(createPartnerAssignmentPanel());
         return true;
     }
 
@@ -402,96 +302,47 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
         return panel;
     }
 
-    private VerticalLayout createPartnerAssignmentPanel() {
+    private VerticalLayout createAssignedPartnerInfoPanel() {
         VerticalLayout panel = new VerticalLayout();
         panel.setWidthFull();
         panel.setPadding(false);
         panel.setSpacing(true);
 
-        H3 title = new H3("Partnerzuweisung");
+        H3 title = new H3("Partner-Informationen");
         title.addClassNames("m-0");
         panel.add(title);
 
-        Grid<PartnerAssignment> assignmentGrid = new Grid<>(PartnerAssignment.class, false);
-        assignmentGrid.setWidthFull();
-        assignmentGrid.addColumn(a -> a.getPartner() != null ? a.getPartner().getFullName() : "-").setHeader("Partner");
-        assignmentGrid.addColumn(a -> a.getFee() != null ? a.getFee().toString() + " EUR" : "-").setHeader("Honorar");
-        assignmentGrid.addColumn(a -> a.getDeadline() != null ? a.getDeadline().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "-").setHeader("Frist");
-        assignmentGrid.addColumn(a -> a.getStatus() != null ? a.getStatus().name() : "-").setHeader("Status");
-
-        assignmentGrid.addComponentColumn(assignment -> {
-            HorizontalLayout actionLayout = new HorizontalLayout();
-            if (assignment.getStatus() == PartnerAssignmentStatus.OFFERED) {
-                Button acceptBtn = new Button("Annehmen", e -> {
-                    String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
-                    orderService.updateAssignmentStatus(assignment, PartnerAssignmentStatus.ACCEPTED, username);
-                    Notification.show("Zuweisung akzeptiert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                    refreshPartnerTab();
-                    refreshDetailsTab();
-                });
-                acceptBtn.addThemeVariants(ButtonVariant.LUMO_SUCCESS, ButtonVariant.LUMO_SMALL);
-                actionLayout.add(acceptBtn);
-            } else if (assignment.getStatus() == PartnerAssignmentStatus.ACCEPTED || assignment.getStatus() == PartnerAssignmentStatus.IN_PROGRESS) {
-                Button submitBtn = new Button("Einreichen", e -> {
-                    String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
-                    orderService.updateAssignmentStatus(assignment, PartnerAssignmentStatus.SUBMITTED, username);
-                    Notification.show("Übersetzung eingereicht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                    refreshPartnerTab();
-                    refreshDetailsTab();
-                });
-                submitBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
-                actionLayout.add(submitBtn);
-            } else if (assignment.getStatus() == PartnerAssignmentStatus.SUBMITTED) {
-                Button approveBtn = new Button("Freigeben", e -> {
-                    String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
-                    orderService.updateAssignmentStatus(assignment, PartnerAssignmentStatus.APPROVED, username);
-                    Notification.show("Übersetzung freigegeben und abgenommen").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                    refreshPartnerTab();
-                    refreshDetailsTab();
-                });
-                approveBtn.addThemeVariants(ButtonVariant.LUMO_SUCCESS, ButtonVariant.LUMO_SMALL);
-                actionLayout.add(approveBtn);
-            }
-            return actionLayout;
-        }).setHeader("Aktionen");
-
         List<PartnerAssignment> assignments = orderService.getAssignmentsForOrder(order.getId());
-        assignmentGrid.setItems(assignments);
-        panel.add(assignmentGrid);
+        PartnerAssignment activeAssignment = assignments.stream()
+                .filter(a -> a.getStatus() != PartnerAssignmentStatus.REJECTED)
+                .findFirst()
+                .orElse(assignments.isEmpty() ? null : assignments.get(0));
 
-        H3 formTitle = new H3("Neuen Partner zuweisen");
-        FormLayout assignForm = new FormLayout();
-        assignForm.setWidthFull();
-        assignForm.setResponsiveSteps(
+        FormLayout partnerForm = new FormLayout();
+        partnerForm.setWidthFull();
+        partnerForm.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("720px", 2)
         );
 
-        ComboBox<Partner> partnerCombo = new ComboBox<>("Partner / Übersetzer");
-        partnerCombo.setItems(partnerService.getAllPartners(tenant.getId()));
-        partnerCombo.setItemLabelGenerator(Partner::getFullName);
+        if (activeAssignment != null && activeAssignment.getPartner() != null) {
+            Partner p = activeAssignment.getPartner();
+            partnerForm.add(
+                    readOnlyField("Name", p.getFullName()),
+                    readOnlyField("Firma", p.getCompanyName()),
+                    readOnlyField("E-Mail", p.getEmail()),
+                    readOnlyField("Telefon", p.getPhone()),
+                    readOnlyField("Honorar", activeAssignment.getFee() != null ? activeAssignment.getFee() + " EUR" : "-"),
+                    readOnlyField("Frist", activeAssignment.getDeadline() != null ? activeAssignment.getDeadline().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "-"),
+                    readOnlyField("Status", activeAssignment.getStatus().name())
+            );
+        } else {
+            Span noPartnerMsg = new Span("Es ist aktuell kein Partner zugewiesen.");
+            noPartnerMsg.getStyle().set("color", "var(--lumo-tertiary-text-color)");
+            partnerForm.add(noPartnerMsg);
+        }
 
-        NumberField feeField = new NumberField("Honorar (EUR)");
-        DatePicker deadlinePicker = new DatePicker("Frist");
-
-        assignForm.add(partnerCombo, feeField, deadlinePicker);
-
-        Button assignBtn = new Button("Partner zuweisen", VaadinIcon.USER_CHECK.create(), e -> {
-            if (partnerCombo.getValue() == null || feeField.getValue() == null || deadlinePicker.getValue() == null) {
-                Notification.show("Bitte alle Felder ausfüllen").addThemeVariants(NotificationVariant.LUMO_WARNING);
-                return;
-            }
-            String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
-            OffsetDateTime deadline = OffsetDateTime.of(deadlinePicker.getValue(), LocalTime.MAX, ZoneOffset.UTC);
-
-            orderService.assignPartnerToOrder(order, partnerCombo.getValue(), BigDecimal.valueOf(feeField.getValue()), deadline, username);
-            Notification.show("Partner erfolgreich zugewiesen").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-            refreshPartnerTab();
-            refreshDetailsTab();
-        });
-        assignBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-
-        panel.add(formTitle, assignForm, assignBtn);
+        panel.add(partnerForm);
         return panel;
     }
 
