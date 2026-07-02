@@ -37,8 +37,12 @@ public class OrdersView extends VerticalLayout {
 
         securityService.getAuthenticatedTenant().ifPresent(t -> this.currentTenant = t);
 
+        String username = securityService.getAuthenticatedUser()
+                .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
+                .orElse("system");
+
         if (currentTenant != null) {
-            grid = new OrderEnterpriseGrid(orderService, currentTenant.getId(), null);
+            grid = new OrderEnterpriseGrid(orderService, currentTenant.getId(), username, null);
         }
 
         add(createHeaderLayout());

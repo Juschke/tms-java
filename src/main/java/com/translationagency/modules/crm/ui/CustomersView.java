@@ -136,10 +136,11 @@ public class CustomersView extends VerticalLayout {
                 customerService.saveCustomer(customer);
                 dialog.close();
                 updateList();
-                Notification n = Notification.show("Kunde erfolgreich gespeichert", 3000, Notification.Position.BOTTOM_END);
-                n.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                com.translationagency.shared.ui.Notifications.success(
+                        "Kunde " + (customer.getCustomerNumber() != null ? customer.getCustomerNumber() + " " : "")
+                                + "erfolgreich gespeichert");
             } catch (Exception ex) {
-                Notification.show("Fehler beim Speichern: " + ex.getMessage(), 5000, Notification.Position.MIDDLE);
+                com.translationagency.shared.ui.Notifications.error("Fehler beim Speichern: " + ex.getMessage());
             }
         });
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);

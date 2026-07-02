@@ -5,6 +5,7 @@ import com.translationagency.modules.inquiry.domain.Quote;
 import com.translationagency.modules.inquiry.domain.QuoteStatus;
 import com.translationagency.modules.document.application.PdfService;
 import com.translationagency.shared.ui.BaseEnterpriseGrid;
+import com.translationagency.shared.ui.StatusBadge;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.grid.HeaderRow;
@@ -52,11 +53,10 @@ public class QuoteEnterpriseGrid extends BaseEnterpriseGrid<Quote> {
             UI.getCurrent().getPage().open(registration.getResourceUri().toString());
         });
 
-        addContextMenuAction("📋 Auftrag erstellen", quote -> {
-            if (quote.getStatus() != QuoteStatus.ACCEPTED) {
-                onConvertToOrder.accept(quote);
-            }
-        });
+        // Nur sichtbar, solange das Angebot noch nicht angenommen wurde (statusabhaengig)
+        addContextMenuAction("📋 Auftrag erstellen",
+                quote -> quote.getStatus() != QuoteStatus.ACCEPTED,
+                onConvertToOrder::accept);
 
         // Enable general search
         enableGeneralSearch(value -> this.filterSearch = value);
@@ -100,17 +100,8 @@ public class QuoteEnterpriseGrid extends BaseEnterpriseGrid<Quote> {
         addSortableTextColumn(q -> q.getNetAmount() + " €", "Netto", "netAmount");
         addSortableTextColumn(q -> q.getGrossAmount() + " €", "Brutto", "grossAmount");
 
-        statusCol = addTextColumn(q -> {
-            if (q.getStatus() == null) return "–";
-            switch (q.getStatus()) {
-                case DRAFT: return "Entwurf";
-                case SENT: return "Gesendet";
-                case ACCEPTED: return "Angenommen";
-                case REJECTED: return "Abgelehnt";
-                case EXPIRED: return "Abgelaufen";
-                default: return q.getStatus().name();
-            }
-        }, "Status");
+        statusCol = addComponentColumn(q -> StatusBadge.create(statusLabel(q.getStatus()), statusTone(q.getStatus())),
+                "Status");
 
         addSortableTextColumn(q -> q.getExpiresAt() != null ? q.getExpiresAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) : "–",
                 "Gültig bis", "expiresAt");
@@ -123,7 +114,32 @@ public class QuoteEnterpriseGrid extends BaseEnterpriseGrid<Quote> {
     protected void configureFilters(HeaderRow filterRow) {
         addTextFilter(numberCol,   value -> this.filterQuoteNumber = value);
         addTextFilter(customerCol, value -> this.filterCustomerName = value);
-        addComboBoxFilter(statusCol, Arrays.asList(QuoteStatus.values()), value -> this.filterStatus = value);
+        addComboBoxFilter(statusCol, Arrays.asList(QuoteStatus.values()),
+                QuoteEnterpriseGrid::statusLabel, value -> this.filterStatus = value);
+    }
+
+    static String statusLabel(QuoteStatus status) {
+        if (status == null) return "–";
+        switch (status) {
+            case DRAFT:    return "Entwurf";
+            case SENT:     return "Gesendet";
+            case ACCEPTED: return "Angenommen";
+            case REJECTED: return "Abgelehnt";
+            case EXPIRED:  return "Abgelaufen";
+            default:       return status.name();
+        }
+    }
+
+    static StatusBadge.Tone statusTone(QuoteStatus status) {
+        if (status == null) return StatusBadge.Tone.NEUTRAL;
+        switch (status) {
+            case DRAFT:    return StatusBadge.Tone.NEUTRAL;
+            case SENT:     return StatusBadge.Tone.INFO;
+            case ACCEPTED: return StatusBadge.Tone.SUCCESS;
+            case REJECTED: return StatusBadge.Tone.DANGER;
+            case EXPIRED:  return StatusBadge.Tone.WARNING;
+            default:       return StatusBadge.Tone.NEUTRAL;
+        }
     }
 
     @Override

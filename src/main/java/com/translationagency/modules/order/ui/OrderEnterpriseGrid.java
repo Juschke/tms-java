@@ -4,7 +4,8 @@ import com.translationagency.modules.order.application.OrderService;
 import com.translationagency.modules.order.domain.TranslationOrder;
 import com.translationagency.modules.order.domain.OrderStatus;
 import com.translationagency.shared.ui.BaseEnterpriseGrid;
-import com.vaadin.flow.component.combobox.ComboBox;
+import com.translationagency.shared.ui.Notifications;
+import com.translationagency.shared.ui.StatusBadge;
 import com.vaadin.flow.component.grid.HeaderRow;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +19,7 @@ public class OrderEnterpriseGrid extends BaseEnterpriseGrid<TranslationOrder> {
 
     private final OrderService orderService;
     private final UUID         tenantId;
+    private final String       currentUsername;
 
     private com.vaadin.flow.component.grid.Grid.Column<TranslationOrder> numberCol;
     private com.vaadin.flow.component.grid.Grid.Column<TranslationOrder> customerCol;
@@ -28,24 +30,76 @@ public class OrderEnterpriseGrid extends BaseEnterpriseGrid<TranslationOrder> {
     private String      filterCustomerName = "";
     private OrderStatus filterStatus       = null;
 
-    public OrderEnterpriseGrid(OrderService orderService, UUID tenantId, Consumer<TranslationOrder> onDelete) {
-        this.orderService = orderService;
-        this.tenantId     = tenantId;
+    public OrderEnterpriseGrid(OrderService orderService, UUID tenantId, String currentUsername,
+                               Consumer<TranslationOrder> onDelete) {
+        this.orderService    = orderService;
+        this.tenantId        = tenantId;
+        this.currentUsername = currentUsername != null ? currentUsername : "system";
 
-        // Wire delete action
         setDeleteAction(onDelete);
-
-        // Enable general search
         enableGeneralSearch(value -> this.filterSearch = value);
 
-        // Row selection navigation to order detail
+        // Zeilenauswahl navigiert in die Detailansicht
         grid.asSingleSelect().addValueChangeListener(event -> {
             if (event.getValue() != null) {
                 getUI().ifPresent(ui -> ui.navigate("orders/" + event.getValue().getId().toString()));
             }
         });
 
+        configureRowActions();
         initialize();
+    }
+
+    /**
+     * Statusabhaengige Kontextmenue-Aktionen (B2B-UX): der Nutzer sieht pro Zeile
+     * nur die Aktionen, die im aktuellen Status fachlich moeglich sind.
+     */
+    private void configureRowActions() {
+        addContextMenuAction("👁️  Details öffnen",
+                o -> true,
+                o -> getUI().ifPresent(ui -> ui.navigate("orders/" + o.getId().toString())));
+
+        addContextMenuAction("📦  Als geliefert markieren",
+                orderService::canDeliver,
+                this::deliverOrder);
+
+        addContextMenuAction("🚫  Stornieren",
+                orderService::canCancel,
+                this::cancelOrder);
+
+        addContextMenuAction("♻️  Reaktivieren",
+                o -> o.getStatus() == OrderStatus.CANCELLED,
+                this::reopenOrder);
+    }
+
+    private void deliverOrder(TranslationOrder o) {
+        try {
+            orderService.markAsDelivered(o.getId(), currentUsername);
+            Notifications.success("Auftrag " + o.getOrderNumber() + " als geliefert markiert.");
+            refresh();
+        } catch (RuntimeException ex) {
+            Notifications.error("Aktion fehlgeschlagen: " + ex.getMessage());
+        }
+    }
+
+    private void cancelOrder(TranslationOrder o) {
+        try {
+            orderService.cancelOrder(o.getId(), currentUsername);
+            Notifications.warning("Auftrag " + o.getOrderNumber() + " wurde storniert.");
+            refresh();
+        } catch (RuntimeException ex) {
+            Notifications.error("Stornierung fehlgeschlagen: " + ex.getMessage());
+        }
+    }
+
+    private void reopenOrder(TranslationOrder o) {
+        try {
+            orderService.reopenOrder(o.getId(), currentUsername);
+            Notifications.success("Auftrag " + o.getOrderNumber() + " wurde reaktiviert.");
+            refresh();
+        } catch (RuntimeException ex) {
+            Notifications.error("Reaktivierung fehlgeschlagen: " + ex.getMessage());
+        }
     }
 
     @Override
@@ -57,22 +111,8 @@ public class OrderEnterpriseGrid extends BaseEnterpriseGrid<TranslationOrder> {
         addSortableTextColumn(o -> o.getNetAmount() + " €", "Netto", "netAmount");
         addSortableTextColumn(o -> o.getGrossAmount() + " €", "Brutto", "grossAmount");
 
-        statusCol = addTextColumn(o -> {
-            if (o.getStatus() == null) return "–";
-            switch (o.getStatus()) {
-                case CREATED: return "Erstellt";
-                case ASSIGNED: return "Partner zugewiesen";
-                case IN_PROGRESS: return "In Bearbeitung";
-                case QA_READY: return "QS-Bereit";
-                case READY_FOR_DELIVERY: return "Lieferbereit";
-                case DELIVERED: return "Geliefert";
-                case INVOICED: return "Abgerechnet";
-                case PAID: return "Bezahlt";
-                case ARCHIVED: return "Archiviert";
-                case CANCELLED: return "Storniert";
-                default: return o.getStatus().name();
-            }
-        }, "Status");
+        statusCol = addComponentColumn(o -> StatusBadge.create(statusLabel(o.getStatus()), statusTone(o.getStatus())),
+                "Status");
 
         addSortableTextColumn(o -> o.getDeliveryDeadline() != null ? o.getDeliveryDeadline().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "–",
                 "Liefertermin", "deliveryDeadline");
@@ -81,11 +121,46 @@ public class OrderEnterpriseGrid extends BaseEnterpriseGrid<TranslationOrder> {
                 "Erstellt am", "createdAt");
     }
 
+    static String statusLabel(OrderStatus status) {
+        if (status == null) return "–";
+        switch (status) {
+            case CREATED:            return "Erstellt";
+            case ASSIGNED:           return "Partner zugewiesen";
+            case IN_PROGRESS:        return "In Bearbeitung";
+            case QA_READY:           return "QS-Bereit";
+            case READY_FOR_DELIVERY: return "Lieferbereit";
+            case DELIVERED:          return "Geliefert";
+            case INVOICED:           return "Abgerechnet";
+            case PAID:               return "Bezahlt";
+            case ARCHIVED:           return "Archiviert";
+            case CANCELLED:          return "Storniert";
+            default:                 return status.name();
+        }
+    }
+
+    static StatusBadge.Tone statusTone(OrderStatus status) {
+        if (status == null) return StatusBadge.Tone.NEUTRAL;
+        switch (status) {
+            case CREATED:            return StatusBadge.Tone.NEUTRAL;
+            case ASSIGNED:
+            case IN_PROGRESS:
+            case QA_READY:           return StatusBadge.Tone.INFO;
+            case READY_FOR_DELIVERY: return StatusBadge.Tone.WARNING;
+            case DELIVERED:
+            case INVOICED:
+            case PAID:
+            case ARCHIVED:           return StatusBadge.Tone.SUCCESS;
+            case CANCELLED:          return StatusBadge.Tone.DANGER;
+            default:                 return StatusBadge.Tone.NEUTRAL;
+        }
+    }
+
     @Override
     protected void configureFilters(HeaderRow filterRow) {
         addTextFilter(numberCol,   value -> this.filterOrderNumber = value);
         addTextFilter(customerCol, value -> this.filterCustomerName = value);
-        addComboBoxFilter(statusCol, Arrays.asList(OrderStatus.values()), value -> this.filterStatus = value);
+        addComboBoxFilter(statusCol, Arrays.asList(OrderStatus.values()),
+                OrderEnterpriseGrid::statusLabel, value -> this.filterStatus = value);
     }
 
     @Override
