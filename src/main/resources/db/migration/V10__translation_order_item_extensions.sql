@@ -1,0 +1,24 @@
+ALTER TABLE translation_order_item
+    ADD COLUMN is_assigned BOOLEAN DEFAULT FALSE,
+    ADD COLUMN assigned_at TIMESTAMP WITH TIME ZONE,
+    
+    ADD COLUMN has_deadline BOOLEAN DEFAULT FALSE,
+    ADD COLUMN deadline_at TIMESTAMP WITH TIME ZONE,
+    
+    ADD COLUMN is_completed BOOLEAN DEFAULT FALSE,
+    ADD COLUMN completed_at TIMESTAMP WITH TIME ZONE,
+    
+    ADD COLUMN is_cancelled BOOLEAN DEFAULT FALSE,
+    ADD COLUMN cancelled_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN cancellation_reason VARCHAR(255),
+    
+    ADD COLUMN invoice_received BOOLEAN DEFAULT FALSE,
+    ADD COLUMN invoice_received_at TIMESTAMP WITH TIME ZONE,
+    
+    ADD COLUMN is_paid BOOLEAN DEFAULT FALSE,
+    ADD COLUMN paid_at TIMESTAMP WITH TIME ZONE,
+    
+    ADD COLUMN created_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN created_by VARCHAR(255),
+    ADD COLUMN updated_by VARCHAR(255);

@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -70,10 +71,71 @@ public class TranslationOrderItem {
     @Column(name = "surcharge_or_discount", precision = 10, scale = 2)
     private BigDecimal surchargeOrDiscount;
 
+    // --- Status Checkboxes and Timestamps ---
+    @Column(name = "is_assigned")
+    private boolean isAssigned = false;
+
+    @Column(name = "assigned_at")
+    private OffsetDateTime assignedAt;
+
+    @Column(name = "has_deadline")
+    private boolean hasDeadline = false;
+
+    @Column(name = "deadline_at")
+    private OffsetDateTime deadlineAt;
+
+    @Column(name = "is_completed")
+    private boolean isCompleted = false;
+
+    @Column(name = "completed_at")
+    private OffsetDateTime completedAt;
+
+    @Column(name = "is_cancelled")
+    private boolean isCancelled = false;
+
+    @Column(name = "cancelled_at")
+    private OffsetDateTime cancelledAt;
+
+    @Column(name = "cancellation_reason")
+    private String cancellationReason;
+
+    // --- Billing Checkboxes and Timestamps ---
+    @Column(name = "invoice_received")
+    private boolean invoiceReceived = false;
+
+    @Column(name = "invoice_received_at")
+    private OffsetDateTime invoiceReceivedAt;
+
+    @Column(name = "is_paid")
+    private boolean isPaid = false;
+
+    @Column(name = "paid_at")
+    private OffsetDateTime paidAt;
+
+    // --- Auditing ---
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
+
+    @Column(name = "created_by", updatable = false)
+    private String createdBy;
+
+    @Column(name = "updated_by")
+    private String updatedBy;
+
     @PrePersist
     protected void onCreate() {
         if (id == null) {
             id = UUID.randomUUID();
         }
+        createdAt = OffsetDateTime.now();
+        updatedAt = OffsetDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = OffsetDateTime.now();
     }
 }
