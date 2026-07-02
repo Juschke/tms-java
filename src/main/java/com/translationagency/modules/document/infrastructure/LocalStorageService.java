@@ -33,9 +33,10 @@ public class LocalStorageService implements StorageService {
     @Override
     public String storeFile(String logicalPath, InputStream inputStream) throws IOException {
         Path destinationFile = this.rootLocation.resolve(Paths.get(logicalPath)).normalize().toAbsolutePath();
-        if (!destinationFile.getParent().equals(this.rootLocation.toAbsolutePath())) {
+        if (!destinationFile.startsWith(this.rootLocation.normalize().toAbsolutePath())) {
             throw new IOException("Cannot store file outside current directory.");
         }
+        Files.createDirectories(destinationFile.getParent());
         Files.copy(inputStream, destinationFile, StandardCopyOption.REPLACE_EXISTING);
         return logicalPath;
     }
@@ -43,7 +44,7 @@ public class LocalStorageService implements StorageService {
     @Override
     public InputStream retrieveFile(String storagePath) throws IOException {
         Path file = rootLocation.resolve(storagePath).normalize().toAbsolutePath();
-        if (!file.getParent().equals(rootLocation.toAbsolutePath())) {
+        if (!file.startsWith(this.rootLocation.normalize().toAbsolutePath())) {
             throw new IOException("Cannot read file outside current directory.");
         }
         if (!Files.exists(file)) {
@@ -55,7 +56,7 @@ public class LocalStorageService implements StorageService {
     @Override
     public void deleteFile(String storagePath) throws IOException {
         Path file = rootLocation.resolve(storagePath).normalize().toAbsolutePath();
-        if (file.getParent().equals(rootLocation.toAbsolutePath())) {
+        if (file.startsWith(this.rootLocation.normalize().toAbsolutePath())) {
             Files.deleteIfExists(file);
         }
     }
