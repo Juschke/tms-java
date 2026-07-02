@@ -104,6 +104,10 @@ public class CustomersView extends VerticalLayout {
         TextField city = new TextField("Ort");
         TextField country = new TextField("Land (Ländercode)");
 
+        formLayout.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("500px", 2)
+        );
         formLayout.add(customerNumber, companyName, vatId, leitwegId, street, zip, city, country);
 
         Binder<Customer> binder = new Binder<>(Customer.class);

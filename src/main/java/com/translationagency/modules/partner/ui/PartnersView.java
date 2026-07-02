@@ -98,6 +98,10 @@ public class PartnersView extends VerticalLayout {
         TextField email = new TextField("E-Mail");
         TextField phone = new TextField("Telefon");
 
+        formLayout.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("500px", 2)
+        );
         formLayout.add(companyName, firstName, lastName, email, phone);
 
         Binder<Partner> binder = new Binder<>(Partner.class);

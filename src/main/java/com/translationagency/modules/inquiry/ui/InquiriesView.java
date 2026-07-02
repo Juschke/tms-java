@@ -142,7 +142,10 @@ public class InquiriesView extends VerticalLayout {
         notes.setPlaceholder("z.B. Besondere Fachterminologie...");
 
         formLayout.add(customerCombo, contactCombo, sourceLang, targetLang, serviceTypeCombo, wordCount, pageCount, isCertified, isExpress, deliveryMethod, notes);
-        formLayout.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 2));
+        formLayout.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("600px", 2)
+        );
         formLayout.setColspan(notes, 2);
 
         Binder<Inquiry> binder = new Binder<>(Inquiry.class);

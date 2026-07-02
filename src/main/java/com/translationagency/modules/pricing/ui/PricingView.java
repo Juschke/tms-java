@@ -197,7 +197,10 @@ public class PricingView extends VerticalLayout {
         BigDecimalField certifiedSurcharge = new BigDecimalField("Beglaubigungszuschlag (EUR)");
 
         formLayout.add(sourceLang, targetLang, serviceType, ratePerWord, ratePerPage, minimumFee, expressSurchargePercent, certifiedSurcharge);
-        formLayout.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 2));
+        formLayout.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("500px", 2)
+        );
 
         Binder<PriceRule> binder = new Binder<>(PriceRule.class);
         binder.bind(sourceLang, PriceRule::getSourceLanguage, PriceRule::setSourceLanguage);
