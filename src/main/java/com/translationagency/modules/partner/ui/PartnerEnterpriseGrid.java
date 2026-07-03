@@ -82,7 +82,7 @@ public class PartnerEnterpriseGrid extends BaseEnterpriseGrid<Partner> {
         // Row selection navigation
         grid.asSingleSelect().addValueChangeListener(event -> {
             if (event.getValue() != null) {
-                getUI().ifPresent(ui -> ui.navigate("partners/" + event.getValue().getId().toString()));
+                getUI().ifPresent(ui -> ui.navigate("partners/detail/" + event.getValue().getId().toString()));
             }
         });
 

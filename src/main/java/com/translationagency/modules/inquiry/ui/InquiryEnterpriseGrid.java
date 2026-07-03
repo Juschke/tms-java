@@ -70,7 +70,7 @@ public class InquiryEnterpriseGrid extends BaseEnterpriseGrid<Inquiry> {
         // Selection listener to navigate to detail
         grid.asSingleSelect().addValueChangeListener(event -> {
             if (event.getValue() != null) {
-                getUI().ifPresent(ui -> ui.navigate("inquiries/" + event.getValue().getId().toString()));
+                getUI().ifPresent(ui -> ui.navigate("inquiries/detail/" + event.getValue().getId().toString()));
             }
         });
 

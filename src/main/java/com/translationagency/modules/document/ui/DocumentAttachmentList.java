@@ -7,6 +7,7 @@ import com.translationagency.modules.document.domain.DocumentCategory;
 import com.translationagency.modules.document.domain.DocumentVersion;
 import com.translationagency.modules.tenant.domain.Tenant;
 import com.translationagency.security.SecurityService;
+import com.translationagency.shared.ui.Confirmations;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.Checkbox;
@@ -164,17 +165,23 @@ public class DocumentAttachmentList extends VerticalLayout {
             downloadButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
             downloadLink.add(downloadButton);
 
-            Button deleteBtn = new Button(VaadinIcon.TRASH.create(), e -> {
+            Button versionBtn = new Button(VaadinIcon.UPLOAD.create(), e -> openVersionUploadDialog(doc));
+            versionBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+            versionBtn.setTooltipText("Neue Version hochladen");
+
+            Button deleteBtn = new Button(VaadinIcon.TRASH.create(), e -> Confirmations.delete("Dokument loeschen",
+                    "Soll das Dokument " + doc.getName() + " wirklich geloescht werden?",
+                    () -> {
                 String username = securityService.getAuthenticatedUser()
                         .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
                         .orElse("system");
                 documentService.deleteDocument(doc.getId(), username);
                 Notification.show("Dokument gelöscht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 refresh();
-            });
+            }));
             deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
 
-            HorizontalLayout actions = new HorizontalLayout(downloadLink, deleteBtn);
+            HorizontalLayout actions = new HorizontalLayout(downloadLink, versionBtn, deleteBtn);
             actions.setSpacing(true);
             return actions;
         }).setHeader("Aktionen").setAutoWidth(true);
@@ -280,6 +287,66 @@ public class DocumentAttachmentList extends VerticalLayout {
 
         dialog.getFooter().add(cancelBtn, saveBtn);
         dialog.add(formLayout);
+        dialog.open();
+    }
+
+    private void openVersionUploadDialog(Document document) {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("Neue Version hochladen");
+        dialog.setWidth("450px");
+
+        MemoryBuffer buffer = new MemoryBuffer();
+        Upload upload = new Upload(buffer);
+        upload.setAcceptedFileTypes(
+                "application/pdf",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "text/plain",
+                "application/zip",
+                "image/png",
+                "image/jpeg"
+        );
+        upload.setMaxFileSize(50 * 1024 * 1024);
+        upload.setDropLabel(new Span("Ziehe Dateien hierher (max. 50 MB)"));
+
+        final long[] uploadedSize = {0};
+        final String[] uploadedMime = {"application/octet-stream"};
+        upload.addSucceededListener(event -> {
+            uploadedSize[0] = event.getContentLength();
+            uploadedMime[0] = event.getMIMEType();
+        });
+
+        Button saveBtn = new Button("Version speichern", e -> {
+            String fileName = buffer.getFileName();
+            if (fileName == null || fileName.isEmpty()) {
+                Notification.show("Bitte wÃ¤hle eine Datei aus").addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
+            }
+
+            try (InputStream fileStream = buffer.getInputStream()) {
+                String username = securityService.getAuthenticatedUser()
+                        .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
+                        .orElse("system");
+                documentService.uploadNewVersion(
+                        document.getId(),
+                        fileName,
+                        uploadedSize[0],
+                        uploadedMime[0],
+                        fileStream,
+                        username
+                );
+                dialog.close();
+                Notification.show("Neue Version gespeichert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                refresh();
+            } catch (Exception ex) {
+                Notification.show("Fehler beim Upload: " + ex.getMessage(), 5000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+        });
+        saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        dialog.add(upload);
+        dialog.getFooter().add(new Button("Abbrechen", e -> dialog.close()), saveBtn);
         dialog.open();
     }
 }

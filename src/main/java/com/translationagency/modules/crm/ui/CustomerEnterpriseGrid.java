@@ -53,7 +53,7 @@ public class CustomerEnterpriseGrid extends BaseEnterpriseGrid<Customer> {
         // Row selection navigation
         grid.asSingleSelect().addValueChangeListener(event -> {
             if (event.getValue() != null) {
-                getUI().ifPresent(ui -> ui.navigate("customers/" + event.getValue().getId().toString()));
+                getUI().ifPresent(ui -> ui.navigate("customers/detail/" + event.getValue().getId().toString()));
             }
         });
 

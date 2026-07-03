@@ -53,26 +53,7 @@ public class DocumentService {
         documentRepository.save(document);
 
         // 2. Datei speichern und Hashwert berechnen (DigestInputStream)
-        String storageKey = UUID.randomUUID().toString() + "_" + originalFileName;
-        MessageDigest digest;
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 Algorithmus nicht gefunden", e);
-        }
-
-        try (DigestInputStream dis = new DigestInputStream(fileStream, digest)) {
-            storageService.storeFile(storageKey, dis);
-        }
-
-        byte[] hashBytes = digest.digest();
-        StringBuilder hexString = new StringBuilder();
-        for (byte b : hashBytes) {
-            String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) hexString.append('0');
-            hexString.append(hex);
-        }
-        String fileHash = hexString.toString();
+        StoredFile storedFile = storeFileWithHash(originalFileName, fileStream);
 
         // 3. Dokumentenversion anlegen
         DocumentVersion version = new DocumentVersion();
@@ -82,13 +63,43 @@ public class DocumentService {
         version.setFileName(originalFileName);
         version.setFileSize(fileSize);
         version.setMimeType(mimeType);
-        version.setFileHash(fileHash);
-        version.setStoragePath(storageKey);
+        version.setFileHash(storedFile.fileHash());
+        version.setStoragePath(storedFile.storageKey());
         version.setCreatedBy(username);
         documentVersionRepository.save(version);
 
         document.getVersions().add(version);
         return document;
+    }
+
+    public DocumentVersion uploadNewVersion(UUID documentId, String originalFileName, long fileSize,
+                                            String mimeType, InputStream fileStream, String username) throws IOException {
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new IllegalArgumentException("Dokument nicht gefunden: " + documentId));
+
+        int nextVersion = document.getVersions().stream()
+                .mapToInt(DocumentVersion::getVersionNumber)
+                .max()
+                .orElse(0) + 1;
+
+        StoredFile storedFile = storeFileWithHash(originalFileName, fileStream);
+
+        DocumentVersion version = new DocumentVersion();
+        version.setId(UUID.randomUUID());
+        version.setDocument(document);
+        version.setVersionNumber(nextVersion);
+        version.setFileName(originalFileName);
+        version.setFileSize(fileSize);
+        version.setMimeType(mimeType);
+        version.setFileHash(storedFile.fileHash());
+        version.setStoragePath(storedFile.storageKey());
+        version.setCreatedBy(username);
+        documentVersionRepository.save(version);
+
+        document.getVersions().add(0, version);
+        document.setUpdatedBy(username);
+        documentRepository.save(document);
+        return version;
     }
 
     @Transactional(readOnly = true)
@@ -111,5 +122,33 @@ public class DocumentService {
 
     public Document saveDocument(Document document) {
         return documentRepository.save(document);
+    }
+
+    private StoredFile storeFileWithHash(String originalFileName, InputStream fileStream) throws IOException {
+        String storageKey = UUID.randomUUID().toString() + "_" + originalFileName;
+        MessageDigest digest;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 Algorithmus nicht gefunden", e);
+        }
+
+        try (DigestInputStream dis = new DigestInputStream(fileStream, digest)) {
+            storageService.storeFile(storageKey, dis);
+        }
+
+        byte[] hashBytes = digest.digest();
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : hashBytes) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
+        }
+        return new StoredFile(storageKey, hexString.toString());
+    }
+
+    private record StoredFile(String storageKey, String fileHash) {
     }
 }

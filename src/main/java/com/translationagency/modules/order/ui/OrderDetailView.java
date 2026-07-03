@@ -2,7 +2,9 @@ package com.translationagency.modules.order.ui;
 
 import com.translationagency.modules.billing.application.BillingService;
 import com.translationagency.modules.billing.domain.Invoice;
+import com.translationagency.modules.billing.domain.InvoiceStatus;
 import com.translationagency.modules.billing.domain.Payment;
+import com.translationagency.modules.communication.application.CommunicationService;
 import com.translationagency.modules.crm.domain.Customer;
 import com.translationagency.modules.document.application.DocumentService;
 import com.translationagency.modules.document.application.PdfService;
@@ -16,6 +18,7 @@ import com.translationagency.modules.pricing.application.PricingService;
 import com.translationagency.modules.tenant.domain.UserAccount;
 import com.translationagency.modules.tenant.domain.Tenant;
 import com.translationagency.security.SecurityService;
+import com.translationagency.shared.ui.Confirmations;
 import com.translationagency.ui.MainLayout;
 import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.button.Button;
@@ -56,7 +59,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
-@Route(value = "orders", layout = MainLayout.class)
+@Route(value = "orders/detail", layout = MainLayout.class)
 @PageTitle("Auftragsdetails | Translation Management")
 @RolesAllowed({"ADMIN", "MANAGER", "CASE_WORKER"})
 public class OrderDetailView extends VerticalLayout implements HasUrlParameter<String> {
@@ -69,6 +72,7 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
     private final SecurityService securityService;
     private final PdfService pdfService;
     private final PricingService pricingService;
+    private final CommunicationService communicationService;
 
     private TranslationOrder order;
     private Tenant tenant;
@@ -89,7 +93,7 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
     public OrderDetailView(OrderService orderService, PartnerService partnerService,
                            BillingService billingService, DocumentService documentService,
                            OrderNoteService orderNoteService, SecurityService securityService, PdfService pdfService,
-                           PricingService pricingService) {
+                           PricingService pricingService, CommunicationService communicationService) {
         this.orderService = orderService;
         this.partnerService = partnerService;
         this.billingService = billingService;
@@ -98,6 +102,7 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
         this.securityService = securityService;
         this.pdfService = pdfService;
         this.pricingService = pricingService;
+        this.communicationService = communicationService;
 
         setSizeFull();
         setSpacing(true);
@@ -247,8 +252,179 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
         partnerPanel.getStyle().set("min-width", "420px");
 
         split.add(customerPanel, partnerPanel);
+        HorizontalLayout actions = createWorkflowActions();
+        if (actions.getChildren().findAny().isPresent()) {
+            detailsLayout.add(actions);
+        }
         detailsLayout.add(split);
         return true;
+    }
+
+    private HorizontalLayout createWorkflowActions() {
+        HorizontalLayout actions = new HorizontalLayout();
+        actions.setWidthFull();
+        actions.setSpacing(true);
+        actions.setPadding(false);
+        actions.getStyle().set("flex-wrap", "wrap");
+
+        if (order.getStatus() == OrderStatus.CREATED || order.getStatus() == OrderStatus.IN_PROGRESS) {
+            Button assignBtn = new Button("Partner beauftragen", VaadinIcon.HANDSHAKE.create(), e -> openPartnerAssignmentDialog());
+            assignBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+            actions.add(assignBtn);
+        }
+
+        PartnerAssignment activeAssignment = getActiveAssignment();
+        if (activeAssignment != null && activeAssignment.getStatus() == PartnerAssignmentStatus.OFFERED) {
+            Button acceptBtn = new Button("Partner hat angenommen", VaadinIcon.CHECK.create(),
+                    e -> updateAssignmentStatus(activeAssignment, PartnerAssignmentStatus.ACCEPTED));
+            actions.add(acceptBtn);
+        }
+
+        if (order.getStatus() == OrderStatus.ASSIGNED || order.getStatus() == OrderStatus.IN_PROGRESS) {
+            Button submittedBtn = new Button("Abgabe erhalten", VaadinIcon.UPLOAD.create(), e -> {
+                PartnerAssignment assignment = getActiveAssignment();
+                if (assignment != null) {
+                    updateAssignmentStatus(assignment, PartnerAssignmentStatus.SUBMITTED);
+                } else {
+                    changeOrderStatus(OrderStatus.QA_READY);
+                }
+            });
+            actions.add(submittedBtn);
+        }
+
+        if (order.getStatus() == OrderStatus.QA_READY) {
+            Button approveBtn = new Button("QS freigeben", VaadinIcon.CHECK.create(), e -> {
+                PartnerAssignment assignment = getActiveAssignment();
+                if (assignment != null) {
+                    updateAssignmentStatus(assignment, PartnerAssignmentStatus.APPROVED);
+                } else {
+                    changeOrderStatus(OrderStatus.READY_FOR_DELIVERY);
+                }
+            });
+            approveBtn.addThemeVariants(ButtonVariant.LUMO_SUCCESS);
+            actions.add(approveBtn);
+        }
+
+        if (order.getStatus() == OrderStatus.QA_READY || order.getStatus() == OrderStatus.READY_FOR_DELIVERY) {
+            Button backToWorkBtn = new Button("Zurueck in Bearbeitung", VaadinIcon.ARROW_LEFT.create(),
+                    e -> changeOrderStatus(OrderStatus.IN_PROGRESS));
+            actions.add(backToWorkBtn);
+        }
+
+        if (orderService.canDeliver(order)) {
+            Button deliverBtn = new Button("Als geliefert markieren", VaadinIcon.CHECK.create(),
+                    e -> changeOrderStatus(OrderStatus.DELIVERED));
+            deliverBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
+            actions.add(deliverBtn);
+        }
+
+        if (orderService.canCancel(order)) {
+            Button cancelBtn = new Button("Stornieren", VaadinIcon.CLOSE.create(), e -> cancelOrder());
+            cancelBtn.addThemeVariants(ButtonVariant.LUMO_ERROR);
+            actions.add(cancelBtn);
+        } else if (order.getStatus() == OrderStatus.CANCELLED) {
+            Button reopenBtn = new Button("Reaktivieren", VaadinIcon.REFRESH.create(),
+                    e -> changeOrderStatus(OrderStatus.CREATED));
+            actions.add(reopenBtn);
+        }
+
+        return actions;
+    }
+
+    private void openPartnerAssignmentDialog() {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("Partner beauftragen");
+
+        ComboBox<Partner> partnerCombo = new ComboBox<>("Partner");
+        partnerCombo.setItems(partnerService.getAllPartners(tenant.getId()));
+        partnerCombo.setItemLabelGenerator(Partner::getFullName);
+        partnerCombo.setWidthFull();
+
+        NumberField feeField = new NumberField("Honorar (EUR)");
+        feeField.setValue(order.getNetAmount() != null ? order.getNetAmount().doubleValue() : 0.0);
+
+        DatePicker deadline = new DatePicker("Frist");
+        deadline.setValue(order.getDeliveryDeadline() != null ? order.getDeliveryDeadline().toLocalDate() : LocalDate.now().plusDays(3));
+
+        FormLayout form = new FormLayout(partnerCombo, feeField, deadline);
+        form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1), new FormLayout.ResponsiveStep("520px", 2));
+
+        Button saveBtn = new Button("Beauftragen", VaadinIcon.CHECK.create(), e -> {
+            if (partnerCombo.getValue() == null) {
+                Notification.show("Bitte einen Partner auswaehlen").addThemeVariants(NotificationVariant.LUMO_WARNING);
+                return;
+            }
+            String username = getCurrentUsername();
+            BigDecimal fee = feeField.getValue() != null ? BigDecimal.valueOf(feeField.getValue()) : BigDecimal.ZERO;
+            OffsetDateTime deadlineAt = deadline.getValue() != null
+                    ? OffsetDateTime.of(deadline.getValue(), LocalTime.of(17, 0), OffsetDateTime.now().getOffset())
+                    : null;
+            orderService.assignPartnerToOrder(order, partnerCombo.getValue(), fee, deadlineAt, username);
+            dialog.close();
+            reloadOrder();
+            Notification.show("Partner wurde beauftragt").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        });
+        saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        dialog.add(form);
+        dialog.getFooter().add(new Button("Abbrechen", e -> dialog.close()), saveBtn);
+        dialog.open();
+    }
+
+    private PartnerAssignment getActiveAssignment() {
+        return orderService.getAssignmentsForOrder(order.getId()).stream()
+                .filter(a -> a.getStatus() != PartnerAssignmentStatus.REJECTED)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void updateAssignmentStatus(PartnerAssignment assignment, PartnerAssignmentStatus status) {
+        try {
+            orderService.updateAssignmentStatus(assignment, status, getCurrentUsername());
+            reloadOrder();
+            Notification.show("Status aktualisiert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        } catch (RuntimeException ex) {
+            Notification.show("Aktion fehlgeschlagen: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
+        }
+    }
+
+    private void changeOrderStatus(OrderStatus status) {
+        try {
+            orderService.changeStatus(order.getId(), status, getCurrentUsername());
+            reloadOrder();
+            Notification.show("Auftragsstatus aktualisiert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        } catch (RuntimeException ex) {
+            Notification.show("Statuswechsel fehlgeschlagen: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
+        }
+    }
+
+    private void cancelOrder() {
+        Confirmations.destructive("Auftrag stornieren",
+                "Soll der Auftrag " + order.getOrderNumber() + " wirklich storniert werden?",
+                "Stornieren",
+                () -> {
+                    try {
+                        orderService.cancelOrder(order.getId(), getCurrentUsername());
+                        reloadOrder();
+                        Notification.show("Auftrag wurde storniert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                    } catch (RuntimeException ex) {
+                        Notification.show("Stornierung fehlgeschlagen: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                    }
+                });
+    }
+
+    private void reloadOrder() {
+        orderService.getOrderById(order.getId()).ifPresent(reloaded -> {
+            order = reloaded;
+            title.setText("Auftrag: " + reloaded.getOrderNumber());
+        });
+        associatedInvoice = billingService.getAllInvoices(tenant.getId()).stream()
+                .filter(i -> i.getOrder() != null && i.getOrder().getId().equals(order.getId()))
+                .findFirst()
+                .orElse(null);
+        refreshDetailsTab();
+        refreshItemsTab();
+        setupBillingTab();
     }
 
     private VerticalLayout createCustomerDetailsPanel() {
@@ -529,7 +705,29 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
             downloadBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
             downloadLink.add(downloadBtn);
 
-            billingLayout.add(invoiceForm, downloadLink);
+            HorizontalLayout invoiceActions = new HorizontalLayout(downloadLink);
+            invoiceActions.setAlignItems(com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment.CENTER);
+            if (associatedInvoice.getStatus() != InvoiceStatus.PAID
+                    && associatedInvoice.getStatus() != InvoiceStatus.CANCELLED) {
+                Button sendInvoiceBtn = new Button("Rechnung per E-Mail senden", VaadinIcon.ENVELOPE.create(), e -> {
+                    try {
+                        communicationService.sendInvoiceEmail(associatedInvoice.getId(), getCurrentUsername());
+                        associatedInvoice = billingService.getAllInvoices(tenant.getId()).stream()
+                                .filter(i -> i.getOrder() != null && i.getOrder().getId().equals(order.getId()))
+                                .findFirst()
+                                .orElse(associatedInvoice);
+                        setupBillingTab();
+                        Notification.show("Rechnung wurde versendet").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                    } catch (RuntimeException ex) {
+                        Notification.show("E-Mail-Versand fehlgeschlagen: " + ex.getMessage())
+                                .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                    }
+                });
+                sendInvoiceBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+                invoiceActions.add(sendInvoiceBtn);
+            }
+
+            billingLayout.add(invoiceForm, invoiceActions);
 
             // Payments section
             H3 paymentsTitle = new H3("Erhaltene Zahlungen");
@@ -543,7 +741,7 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
             billingLayout.add(paymentsTitle, paymentGrid);
 
             // Record Payment Form
-            if (associatedInvoice.getStatus() != com.translationagency.modules.billing.domain.InvoiceStatus.PAID) {
+            if (associatedInvoice.getStatus() != InvoiceStatus.PAID) {
                 H3 addPaymentTitle = new H3("Zahlungseingang buchen");
                 FormLayout paymentForm = new FormLayout();
 
@@ -625,14 +823,16 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
             Button editBtn = new Button(VaadinIcon.EDIT.create(), e -> openTeilauftragDialog(item));
             editBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
-            Button deleteBtn = new Button(VaadinIcon.TRASH.create(), e -> {
+            Button deleteBtn = new Button(VaadinIcon.TRASH.create(), e -> Confirmations.delete("Teilauftrag loeschen",
+                    "Soll dieser Teilauftrag wirklich geloescht werden?",
+                    () -> {
                 order.getItems().remove(item);
                 orderService.recalculateOrderTotals(order);
                 orderService.saveOrder(order);
                 Notification.show("Teilauftrag gelöscht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 refreshItemsTab();
                 refreshDetailsTab();
-            });
+                    }));
             deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
 
             return new HorizontalLayout(editBtn, deleteBtn);

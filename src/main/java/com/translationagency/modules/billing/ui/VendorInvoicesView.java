@@ -10,6 +10,7 @@ import com.translationagency.modules.partner.domain.Partner;
 import com.translationagency.modules.tenant.application.NumberRangeService;
 import com.translationagency.modules.tenant.domain.Tenant;
 import com.translationagency.security.SecurityService;
+import com.translationagency.shared.ui.Confirmations;
 import com.translationagency.ui.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -162,11 +163,14 @@ public class VendorInvoicesView extends VerticalLayout {
             }
 
             // Delete Button
-            Button deleteBtn = new Button(VaadinIcon.TRASH.create(), e -> {
+            Button deleteBtn = new Button(VaadinIcon.TRASH.create(), e -> Confirmations.delete(
+                    "Eingangsrechnung loeschen",
+                    "Soll die Eingangsrechnung " + vi.getInvoiceNumber() + " wirklich geloescht werden?",
+                    () -> {
                 vendorInvoiceService.deleteVendorInvoice(vi.getId());
                 refreshVendorInvoices();
                 Notification.show("Eingangsrechnung gelöscht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-            });
+                    }));
             deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
             actionLayout.add(deleteBtn);
 
@@ -193,11 +197,14 @@ public class VendorInvoicesView extends VerticalLayout {
         externalCostGrid.addColumn(ec -> ec.getOrder() != null ? ec.getOrder().getOrderNumber() : "-").setHeader("Auftrag / Projekt").setAutoWidth(true);
 
         externalCostGrid.addComponentColumn(ec -> {
-            Button deleteBtn = new Button(VaadinIcon.TRASH.create(), e -> {
+            Button deleteBtn = new Button(VaadinIcon.TRASH.create(), e -> Confirmations.delete(
+                    "Fremdkosten loeschen",
+                    "Soll dieser Kosten-Eintrag wirklich geloescht werden?",
+                    () -> {
                 vendorInvoiceService.deleteExternalCost(ec.getId());
                 refreshExternalCosts();
                 Notification.show("Kosten-Eintrag gelöscht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-            });
+                    }));
             deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
             return deleteBtn;
         }).setHeader("Aktionen").setAutoWidth(true);

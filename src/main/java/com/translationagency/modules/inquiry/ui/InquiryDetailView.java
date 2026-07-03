@@ -52,7 +52,7 @@ import jakarta.annotation.security.RolesAllowed;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-@Route(value = "inquiries", layout = MainLayout.class)
+@Route(value = "inquiries/detail", layout = MainLayout.class)
 @PageTitle("Anfrage Details | Translation Management")
 @RolesAllowed({"ADMIN", "MANAGER", "CASE_WORKER"})
 public class InquiryDetailView extends VerticalLayout implements HasUrlParameter<String> {
@@ -343,7 +343,7 @@ public class InquiryDetailView extends VerticalLayout implements HasUrlParameter
                                 .orElse("system");
                         TranslationOrder order = orderService.createOrderFromQuote(associatedQuote, username);
                         Notification.show("Auftrag " + order.getOrderNumber() + " erfolgreich erstellt!").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                        getUI().ifPresent(ui -> ui.navigate("inquiries/" + inquiry.getId().toString()));
+                        getUI().ifPresent(ui -> ui.navigate("inquiries/detail/" + inquiry.getId().toString()));
                     } catch (Exception ex) {
                         Notification.show("Fehler beim Erstellen des Auftrags: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
                     }
@@ -411,7 +411,7 @@ public class InquiryDetailView extends VerticalLayout implements HasUrlParameter
             Notification.show("Angebot " + quote.getQuoteNumber() + " erfolgreich generiert!").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
             
             // Reload page or navigate to quote list (we don't have QuotesView yet, but we will soon)
-            getUI().ifPresent(ui -> ui.navigate("inquiries/" + inquiry.getId().toString()));
+            getUI().ifPresent(ui -> ui.navigate("inquiries/detail/" + inquiry.getId().toString()));
         } catch (Exception ex) {
             Notification.show("Fehler bei der Angebotserstellung: " + ex.getMessage(), 5000, Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_ERROR);
         }

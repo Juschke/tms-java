@@ -7,6 +7,7 @@ import com.translationagency.modules.document.application.DocumentService;
 import com.translationagency.modules.document.ui.DocumentAttachmentList;
 import com.translationagency.modules.tenant.domain.Tenant;
 import com.translationagency.security.SecurityService;
+import com.translationagency.shared.ui.Confirmations;
 import com.translationagency.ui.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -33,7 +34,7 @@ import jakarta.annotation.security.RolesAllowed;
 
 import java.util.UUID;
 
-@Route(value = "customers", layout = MainLayout.class)
+@Route(value = "customers/detail", layout = MainLayout.class)
 @PageTitle("Kunde Details | Translation Management")
 @RolesAllowed({"ADMIN", "MANAGER", "CASE_WORKER"})
 public class CustomerDetailView extends VerticalLayout implements HasUrlParameter<String> {
@@ -190,14 +191,17 @@ public class CustomerDetailView extends VerticalLayout implements HasUrlParamete
             Button editButton = new Button(VaadinIcon.EDIT.create(), e -> openContactPersonDialog(cp, grid));
             editButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
-            Button deleteButton = new Button(VaadinIcon.TRASH.create(), e -> {
+            Button deleteButton = new Button(VaadinIcon.TRASH.create(), e -> Confirmations.delete(
+                    "Ansprechpartner loeschen",
+                    "Soll " + cp.getFullName() + " wirklich geloescht werden?",
+                    () -> {
                 String username = securityService.getAuthenticatedUser()
                         .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
                         .orElse("system");
                 customerService.deleteContactPerson(cp.getId(), username);
                 Notification.show("Ansprechpartner gelöscht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 grid.setItems(customerService.getContactPersons(customer.getId()));
-            });
+                    }));
             deleteButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
 
             return new HorizontalLayout(editButton, deleteButton);

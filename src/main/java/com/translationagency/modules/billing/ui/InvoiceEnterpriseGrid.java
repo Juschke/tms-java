@@ -39,7 +39,7 @@ public class InvoiceEnterpriseGrid extends BaseEnterpriseGrid<Invoice> {
     private java.time.OffsetDateTime filterIssuedTo   = null;
 
     public InvoiceEnterpriseGrid(BillingService billingService, PdfService pdfService, UUID tenantId,
-                                 Consumer<Invoice> onRecordPayment) {
+                                 Consumer<Invoice> onSendEmail, Consumer<Invoice> onRecordPayment) {
         this.billingService = billingService;
         this.tenantId       = tenantId;
 
@@ -49,6 +49,11 @@ public class InvoiceEnterpriseGrid extends BaseEnterpriseGrid<Invoice> {
             StreamRegistration registration = VaadinSession.getCurrent().getResourceRegistry().registerResource(pdfResource);
             UI.getCurrent().getPage().open(registration.getResourceUri().toString());
         });
+
+        addContextMenuAction("E-Mail versenden",
+                invoice -> invoice.getStatus() != InvoiceStatus.PAID
+                        && invoice.getStatus() != InvoiceStatus.CANCELLED,
+                onSendEmail::accept);
 
         // Zahlung buchen – nur solange die Rechnung nicht vollstaendig bezahlt/storniert ist
         addContextMenuAction("💸 Zahlung buchen",

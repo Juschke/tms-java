@@ -1,6 +1,7 @@
 package com.translationagency.modules.inquiry.ui;
 
 import com.translationagency.modules.inquiry.application.InquiryService;
+import com.translationagency.modules.communication.application.CommunicationService;
 import com.translationagency.modules.inquiry.domain.Quote;
 import com.translationagency.modules.inquiry.domain.QuoteStatus;
 import com.translationagency.modules.order.application.OrderService;
@@ -8,6 +9,7 @@ import com.translationagency.modules.order.domain.TranslationOrder;
 import com.translationagency.modules.document.application.PdfService;
 import com.translationagency.modules.tenant.domain.Tenant;
 import com.translationagency.security.SecurityService;
+import com.translationagency.shared.ui.Confirmations;
 import com.translationagency.ui.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -36,16 +38,19 @@ public class QuotesView extends VerticalLayout {
     private final OrderService orderService;
     private final PdfService pdfService;
     private final SecurityService securityService;
+    private final CommunicationService communicationService;
 
     private QuoteEnterpriseGrid grid;
     private Tenant currentTenant;
 
     public QuotesView(InquiryService inquiryService, OrderService orderService,
-                      PdfService pdfService, SecurityService securityService) {
+                      PdfService pdfService, SecurityService securityService,
+                      CommunicationService communicationService) {
         this.inquiryService = inquiryService;
         this.orderService = orderService;
         this.pdfService = pdfService;
         this.securityService = securityService;
+        this.communicationService = communicationService;
 
         setSizeFull();
         setSpacing(true);
@@ -55,7 +60,7 @@ public class QuotesView extends VerticalLayout {
 
         if (currentTenant != null) {
             grid = new QuoteEnterpriseGrid(inquiryService, pdfService, currentTenant.getId(),
-                    this::convertToOrder, this::deleteQuote);
+                    this::sendQuoteEmail, this::convertToOrder, this::deleteQuote);
         }
 
         add(createHeaderLayout());
@@ -94,16 +99,35 @@ public class QuotesView extends VerticalLayout {
         }
     }
 
-    private void deleteQuote(Quote quote) {
+    private void sendQuoteEmail(Quote quote) {
         try {
             String username = securityService.getAuthenticatedUser()
                     .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
                     .orElse("system");
-            inquiryService.deleteQuote(quote.getId(), username);
-            Notification.show("Angebot erfolgreich storniert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            communicationService.sendQuoteEmail(quote.getId(), username);
+            Notification.show("Angebot wurde per E-Mail versendet").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
             updateList();
         } catch (Exception ex) {
-            Notification.show("Fehler beim Stornieren des Angebots: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
+            Notification.show("Versand fehlgeschlagen: " + ex.getMessage(), 6000, Notification.Position.MIDDLE)
+                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
+    }
+
+    private void deleteQuote(Quote quote) {
+        Confirmations.destructive("Angebot stornieren",
+                "Soll das Angebot " + quote.getQuoteNumber() + " wirklich storniert werden?",
+                "Stornieren",
+                () -> {
+                    try {
+                        String username = securityService.getAuthenticatedUser()
+                                .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
+                                .orElse("system");
+                        inquiryService.deleteQuote(quote.getId(), username);
+                        Notification.show("Angebot erfolgreich storniert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                        updateList();
+                    } catch (Exception ex) {
+                        Notification.show("Fehler beim Stornieren des Angebots: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                    }
+                });
     }
 }

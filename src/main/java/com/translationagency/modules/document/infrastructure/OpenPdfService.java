@@ -16,6 +16,8 @@ import com.translationagency.modules.billing.domain.InvoiceLine;
 import com.translationagency.modules.document.application.PdfService;
 import com.translationagency.modules.inquiry.domain.Quote;
 import com.translationagency.modules.inquiry.domain.QuoteLine;
+import com.translationagency.modules.settings.application.SettingsService;
+import com.translationagency.modules.settings.domain.TenantSettings;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -28,10 +30,17 @@ import java.time.format.DateTimeFormatter;
 @Service
 public class OpenPdfService implements PdfService {
 
+    private final SettingsService settingsService;
+
+    public OpenPdfService(SettingsService settingsService) {
+        this.settingsService = settingsService;
+    }
+
     @Override
     public ByteArrayInputStream generateQuotePdf(Quote quote) {
         Document document = new Document();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
+        TenantSettings settings = settingsFor(quote.getTenant().getId());
 
         try {
             PdfWriter.getInstance(document, out);
@@ -49,11 +58,11 @@ public class OpenPdfService implements PdfService {
             headerTable.setWidthPercentage(100);
             headerTable.setWidths(new float[]{1, 1});
 
-            PdfPCell leftCell = new PdfPCell(new Paragraph("ÜBERSETZUNGSDIENST\nAntigravity Translations", boldFont));
+            PdfPCell leftCell = new PdfPCell(new Paragraph(companyHeaderTitle(settings), boldFont));
             leftCell.setBorder(PdfPCell.NO_BORDER);
             headerTable.addCell(leftCell);
 
-            PdfPCell rightCell = new PdfPCell(new Paragraph("Musterstraße 42\n10115 Berlin\nDeutschland\ninfo@translations.com", smallFont));
+            PdfPCell rightCell = new PdfPCell(new Paragraph(companyAddressBlock(settings), smallFont));
             rightCell.setBorder(PdfPCell.NO_BORDER);
             rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
             headerTable.addCell(rightCell);
@@ -143,7 +152,9 @@ public class OpenPdfService implements PdfService {
             document.add(new Paragraph("\n\n"));
 
             // 6. Fußbereich
-            Paragraph terms = new Paragraph("Vielen Dank für Ihre Anfrage! Wir freuen uns auf Ihren Auftrag.\nEs gelten unsere allgemeinen Geschäftsbedingungen.", smallFont);
+            Paragraph terms = new Paragraph(defaultText(settings.getQuoteFooter(),
+                    "Vielen Dank fuer Ihre Anfrage! Wir freuen uns auf Ihren Auftrag.\n"
+                            + "Es gelten unsere allgemeinen Geschaeftsbedingungen."), smallFont);
             terms.setAlignment(Element.ALIGN_CENTER);
             document.add(terms);
 
@@ -160,6 +171,7 @@ public class OpenPdfService implements PdfService {
     public ByteArrayInputStream generateInvoicePdf(Invoice invoice) {
         Document document = new Document();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
+        TenantSettings settings = settingsFor(invoice.getTenant().getId());
 
         try {
             PdfWriter.getInstance(document, out);
@@ -177,11 +189,11 @@ public class OpenPdfService implements PdfService {
             headerTable.setWidthPercentage(100);
             headerTable.setWidths(new float[]{1, 1});
 
-            PdfPCell leftCell = new PdfPCell(new Paragraph("ÜBERSETZUNGSDIENST\nAntigravity Translations", boldFont));
+            PdfPCell leftCell = new PdfPCell(new Paragraph(companyHeaderTitle(settings), boldFont));
             leftCell.setBorder(PdfPCell.NO_BORDER);
             headerTable.addCell(leftCell);
 
-            PdfPCell rightCell = new PdfPCell(new Paragraph("Musterstraße 42\n10115 Berlin\nDeutschland\ninfo@translations.com", smallFont));
+            PdfPCell rightCell = new PdfPCell(new Paragraph(companyAddressBlock(settings), smallFont));
             rightCell.setBorder(PdfPCell.NO_BORDER);
             rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
             headerTable.addCell(rightCell);
@@ -270,12 +282,19 @@ public class OpenPdfService implements PdfService {
             document.add(new Paragraph("\n\n"));
 
             // 6. Bankdaten & Zahlungskonditionen
-            Paragraph paymentTerms = new Paragraph("Bitte überweisen Sie den Betrag bis zum " + 
+            Paragraph paymentTerms = new Paragraph("Bitte ueberweisen Sie den Betrag bis zum " +
                     (invoice.getDueAt() != null ? invoice.getDueAt().format(formatter) : "-") + " auf folgendes Bankkonto:\n" +
-                    "Bank: Musterbank AG | IBAN: DE89 5001 0517 3500 1234 56 | BIC: MUSTDEFFXXX\n" +
+                    bankDetails(settings) + "\n" +
                     "Verwendungszweck: " + invoice.getInvoiceNumber(), normalFont);
             paymentTerms.setSpacingBefore(15);
             document.add(paymentTerms);
+
+            if (!isBlank(settings.getInvoiceFooter())) {
+                Paragraph footer = new Paragraph(settings.getInvoiceFooter(), smallFont);
+                footer.setSpacingBefore(20);
+                footer.setAlignment(Element.ALIGN_CENTER);
+                document.add(footer);
+            }
 
             document.close();
 
@@ -284,6 +303,70 @@ public class OpenPdfService implements PdfService {
         }
 
         return new ByteArrayInputStream(out.toByteArray());
+    }
+
+    private TenantSettings settingsFor(java.util.UUID tenantId) {
+        return settingsService.getOrCreateTenantSettings(tenantId);
+    }
+
+    private String companyHeaderTitle(TenantSettings settings) {
+        return "UEBERSETZUNGSDIENST\n" + defaultText(settings.getCompanyName(), "Ihre Uebersetzungsagentur");
+    }
+
+    private String companyAddressBlock(TenantSettings settings) {
+        StringBuilder block = new StringBuilder();
+        appendLine(block, settings.getStreet());
+        String zipCity = joinWithSpace(settings.getZip(), settings.getCity());
+        appendLine(block, zipCity);
+        appendLine(block, settings.getCountry());
+        appendLine(block, settings.getPhone());
+        appendLine(block, settings.getEmail());
+        appendLine(block, settings.getWebsite());
+        appendLine(block, labelValue("Steuernr.", settings.getTaxNumber()));
+        appendLine(block, labelValue("USt-ID", settings.getVatId()));
+        return defaultText(block.toString().trim(), "Bitte Mandantendaten in den Einstellungen pflegen.");
+    }
+
+    private String bankDetails(TenantSettings settings) {
+        StringBuilder block = new StringBuilder();
+        appendLine(block, labelValue("Bank", settings.getBankName()));
+        appendLine(block, labelValue("IBAN", settings.getIban()));
+        appendLine(block, labelValue("BIC", settings.getBic()));
+        return defaultText(block.toString().trim(), "Zahlungsdaten bitte der gesonderten Vereinbarung entnehmen.");
+    }
+
+    private String labelValue(String label, String value) {
+        if (isBlank(value)) {
+            return "";
+        }
+        return label + ": " + value.trim();
+    }
+
+    private String joinWithSpace(String left, String right) {
+        if (isBlank(left)) {
+            return defaultText(right, "");
+        }
+        if (isBlank(right)) {
+            return left.trim();
+        }
+        return left.trim() + " " + right.trim();
+    }
+
+    private void appendLine(StringBuilder builder, String value) {
+        if (!isBlank(value)) {
+            if (builder.length() > 0) {
+                builder.append('\n');
+            }
+            builder.append(value.trim());
+        }
+    }
+
+    private String defaultText(String value, String fallback) {
+        return isBlank(value) ? fallback : value.trim();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private PdfPCell createCell(String text, Font font, int alignment, Color background) {
@@ -307,6 +390,7 @@ public class OpenPdfService implements PdfService {
     public ByteArrayInputStream generateDunningPdf(Invoice invoice, DunningLog log) {
         Document document = new Document();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
+        TenantSettings settings = settingsFor(invoice.getTenant().getId());
 
         try {
             PdfWriter.getInstance(document, out);
@@ -323,11 +407,11 @@ public class OpenPdfService implements PdfService {
             headerTable.setWidthPercentage(100);
             headerTable.setWidths(new float[]{1, 1});
 
-            PdfPCell leftCell = new PdfPCell(new Paragraph("ÜBERSETZUNGSDIENST\nAntigravity Translations", boldFont));
+            PdfPCell leftCell = new PdfPCell(new Paragraph(companyHeaderTitle(settings), boldFont));
             leftCell.setBorder(PdfPCell.NO_BORDER);
             headerTable.addCell(leftCell);
 
-            PdfPCell rightCell = new PdfPCell(new Paragraph("Musterstraße 42\n10115 Berlin\nDeutschland\ninfo@translations.com", smallFont));
+            PdfPCell rightCell = new PdfPCell(new Paragraph(companyAddressBlock(settings), smallFont));
             rightCell.setBorder(PdfPCell.NO_BORDER);
             rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
             headerTable.addCell(rightCell);
@@ -404,8 +488,8 @@ public class OpenPdfService implements PdfService {
             document.add(new Paragraph("\n\n"));
 
             // 6. Bank Details
-            Paragraph paymentTerms = new Paragraph("Bitte überweisen Sie den Gesamtbetrag auf folgendes Bankkonto:\n" +
-                    "Bank: Musterbank AG | IBAN: DE89 5001 0517 3500 1234 56 | BIC: MUSTDEFFXXX\n" +
+            Paragraph paymentTerms = new Paragraph("Bitte ueberweisen Sie den Gesamtbetrag auf folgendes Bankkonto:\n" +
+                    bankDetails(settings) + "\n" +
                     "Verwendungszweck: " + invoice.getInvoiceNumber() + " MAHNUNG", normalFont);
             document.add(paymentTerms);
 

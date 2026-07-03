@@ -13,9 +13,13 @@ import com.translationagency.modules.settings.domain.TenantSettings;
 import com.translationagency.modules.settings.domain.TextTemplate;
 import com.translationagency.modules.settings.domain.TextTemplateType;
 import com.translationagency.modules.tenant.application.NumberRangeService;
+import com.translationagency.modules.tenant.application.UserAccountService;
 import com.translationagency.modules.tenant.domain.NumberRange;
+import com.translationagency.modules.tenant.domain.Role;
 import com.translationagency.modules.tenant.domain.Tenant;
+import com.translationagency.modules.tenant.domain.UserAccount;
 import com.translationagency.security.SecurityService;
+import com.translationagency.shared.ui.Confirmations;
 import com.translationagency.ui.MainLayout;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.button.Button;
@@ -39,6 +43,7 @@ import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.textfield.BigDecimalField;
 import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.IntegerField;
+import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
@@ -59,6 +64,7 @@ public class SettingsView extends VerticalLayout {
     private final NumberRangeService numberRangeService;
     private final DunningService dunningService;
     private final SecurityService securityService;
+    private final UserAccountService userAccountService;
 
     private Tenant currentTenant;
     private TenantSettings tenantSettings;
@@ -71,6 +77,7 @@ public class SettingsView extends VerticalLayout {
     private VerticalLayout numberRangesLayout;
     private VerticalLayout templatesLayout;
     private VerticalLayout dunningSettingsLayout;
+    private VerticalLayout usersLayout;
 
     private final Grid<Language> languageGrid = new Grid<>(Language.class, false);
     private final Grid<ServiceType> serviceTypeGrid = new Grid<>(ServiceType.class, false);
@@ -78,17 +85,20 @@ public class SettingsView extends VerticalLayout {
     private final Grid<Unit> unitGrid = new Grid<>(Unit.class, false);
     private final Grid<NumberRange> numberRangeGrid = new Grid<>(NumberRange.class, false);
     private final Grid<TextTemplate> templateGrid = new Grid<>(TextTemplate.class, false);
+    private final Grid<UserAccount> userGrid = new Grid<>(UserAccount.class, false);
 
     public SettingsView(SettingsService settingsService,
                         PricingService pricingService,
                         NumberRangeService numberRangeService,
                         DunningService dunningService,
-                        SecurityService securityService) {
+                        SecurityService securityService,
+                        UserAccountService userAccountService) {
         this.settingsService = settingsService;
         this.pricingService = pricingService;
         this.numberRangeService = numberRangeService;
         this.dunningService = dunningService;
         this.securityService = securityService;
+        this.userAccountService = userAccountService;
 
         setSizeFull();
         setSpacing(true);
@@ -122,8 +132,9 @@ public class SettingsView extends VerticalLayout {
         Tab numberRangesTab = new Tab("Nummernkreise");
         Tab templatesTab = new Tab("Textvorlagen");
         Tab dunningSettingsTab = new Tab("Mahneinstellungen");
+        Tab usersTab = new Tab("Benutzer");
 
-        tabs.add(tenantTab, masterDataTab, numberRangesTab, templatesTab, dunningSettingsTab);
+        tabs.add(tenantTab, masterDataTab, numberRangesTab, templatesTab, dunningSettingsTab, usersTab);
         tabs.addSelectedChangeListener(event -> {
             contentContainer.removeAll();
             if (event.getSelectedTab().equals(tenantTab)) {
@@ -139,6 +150,9 @@ public class SettingsView extends VerticalLayout {
                 refreshTextTemplates();
             } else if (event.getSelectedTab().equals(dunningSettingsTab)) {
                 contentContainer.add(dunningSettingsLayout);
+            } else if (event.getSelectedTab().equals(usersTab)) {
+                contentContainer.add(usersLayout);
+                refreshUsers();
             }
         });
     }
@@ -149,6 +163,7 @@ public class SettingsView extends VerticalLayout {
         setupNumberRangesTab();
         setupTextTemplatesTab();
         setupDunningSettingsTab();
+        setupUsersTab();
 
         contentContainer.removeAll();
         contentContainer.add(tenantLayout);
@@ -436,6 +451,41 @@ public class SettingsView extends VerticalLayout {
         refreshTextTemplates();
     }
 
+    private void setupUsersTab() {
+        usersLayout = new VerticalLayout();
+        usersLayout.setSizeFull();
+        usersLayout.setPadding(false);
+
+        Button addUserBtn = new Button("Benutzer", VaadinIcon.PLUS.create(), e -> openUserDialog(new UserAccount()));
+        addUserBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        userGrid.setSizeFull();
+        userGrid.addColumn(UserAccount::getUsername).setHeader("Benutzername").setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(UserAccount::getEmail).setHeader("E-Mail").setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(UserAccount::getFullName).setHeader("Name").setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(user -> user.getRole() != null ? user.getRole().name() : "-")
+                .setHeader("Rolle").setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(user -> user.isEnabled() ? "Aktiv" : "Inaktiv")
+                .setHeader("Status").setAutoWidth(true).setSortable(true);
+        userGrid.addColumn(user -> user.getUpdatedAt() != null
+                ? user.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+                : "-").setHeader("Geaendert").setAutoWidth(true);
+        userGrid.addComponentColumn(user -> {
+            Button editBtn = new Button(VaadinIcon.EDIT.create(), e -> openUserDialog(user));
+            editBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+            editBtn.setTooltipText("Bearbeiten");
+
+            Button deleteBtn = new Button(VaadinIcon.TRASH.create(), e -> deleteUser(user));
+            deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
+            deleteBtn.setTooltipText("Loeschen");
+
+            return new HorizontalLayout(editBtn, deleteBtn);
+        }).setHeader("Aktionen").setAutoWidth(true);
+
+        usersLayout.add(addUserBtn, userGrid);
+        refreshUsers();
+    }
+
     private void setupDunningSettingsTab() {
         dunningSettingsLayout = new VerticalLayout();
         dunningSettingsLayout.setWidthFull();
@@ -585,6 +635,10 @@ public class SettingsView extends VerticalLayout {
 
     private void refreshTextTemplates() {
         templateGrid.setItems(settingsService.getTextTemplates(currentTenant.getId()));
+    }
+
+    private void refreshUsers() {
+        userGrid.setItems(userAccountService.getUsers(currentTenant.getId()));
     }
 
     private void openLanguageDialog(Language language) {
@@ -836,10 +890,96 @@ public class SettingsView extends VerticalLayout {
         dialog.open();
     }
 
+    private void openUserDialog(UserAccount user) {
+        Dialog dialog = new Dialog();
+        boolean newUser = user.getId() == null;
+        dialog.setHeaderTitle(newUser ? "Benutzer anlegen" : "Benutzer bearbeiten");
+        dialog.setWidth("620px");
+
+        TextField username = new TextField("Benutzername");
+        EmailField email = new EmailField("E-Mail");
+        TextField firstName = new TextField("Vorname");
+        TextField lastName = new TextField("Nachname");
+        ComboBox<Role> role = new ComboBox<>("Rolle");
+        PasswordField password = new PasswordField(newUser ? "Passwort" : "Neues Passwort");
+        Checkbox enabled = new Checkbox("Aktiv");
+
+        role.setItems(Role.values());
+        role.setItemLabelGenerator(Role::name);
+        password.setRevealButtonVisible(true);
+        if (!newUser) {
+            password.setHelperText("Leer lassen, um das bestehende Passwort zu behalten.");
+        }
+
+        username.setValue(valueOrEmpty(user.getUsername()));
+        email.setValue(valueOrEmpty(user.getEmail()));
+        firstName.setValue(valueOrEmpty(user.getFirstName()));
+        lastName.setValue(valueOrEmpty(user.getLastName()));
+        role.setValue(valueOrDefault(user.getRole(), Role.CASE_WORKER));
+        enabled.setValue(newUser || user.isEnabled());
+
+        FormLayout form = new FormLayout(username, email, firstName, lastName, role, password, enabled);
+        form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1), new FormLayout.ResponsiveStep("560px", 2));
+
+        Button saveBtn = new Button("Speichern", VaadinIcon.CHECK.create(), e -> {
+            if (isBlank(username.getValue()) || isBlank(email.getValue()) || role.getValue() == null) {
+                Notification.show("Benutzername, E-Mail und Rolle sind erforderlich")
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
+            }
+            if (newUser && isBlank(password.getValue())) {
+                Notification.show("Passwort ist fuer neue Benutzer erforderlich")
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
+            }
+
+            user.setUsername(username.getValue().trim());
+            user.setEmail(email.getValue().trim());
+            user.setFirstName(firstName.getValue());
+            user.setLastName(lastName.getValue());
+            user.setRole(role.getValue());
+            user.setEnabled(enabled.getValue());
+
+            try {
+                userAccountService.saveUser(user, currentTenant, password.getValue(), getCurrentUsername());
+                dialog.close();
+                refreshUsers();
+                Notification.show("Benutzer gespeichert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            } catch (RuntimeException ex) {
+                Notification.show("Benutzer konnte nicht gespeichert werden: " + ex.getMessage())
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+        });
+        saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        dialog.getFooter().add(new Button("Abbrechen", e -> dialog.close()), saveBtn);
+        dialog.add(form);
+        dialog.open();
+    }
+
+    private void deleteUser(UserAccount user) {
+        if (user.getUsername() != null && user.getUsername().equals(getCurrentUsername())) {
+            Notification.show("Der aktuell angemeldete Benutzer kann nicht geloescht werden.")
+                    .addThemeVariants(NotificationVariant.LUMO_WARNING);
+            return;
+        }
+        Confirmations.delete("Benutzer loeschen",
+                "Soll der Benutzer " + user.getUsername() + " wirklich geloescht werden?",
+                () -> {
+                    userAccountService.deleteUser(user.getId(), getCurrentUsername());
+                    refreshUsers();
+                    Notification.show("Benutzer geloescht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                });
+    }
+
     private void deleteTextTemplate(TextTemplate template) {
-        settingsService.deleteTextTemplate(template.getId(), getCurrentUsername());
-        refreshTextTemplates();
-        Notification.show("Textvorlage geloescht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        Confirmations.delete("Textvorlage loeschen",
+                "Soll die Textvorlage " + template.getName() + " wirklich geloescht werden?",
+                () -> {
+                    settingsService.deleteTextTemplate(template.getId(), getCurrentUsername());
+                    refreshTextTemplates();
+                    Notification.show("Textvorlage geloescht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                });
     }
 
     private String getEntityTypeLabel(String entityType) {

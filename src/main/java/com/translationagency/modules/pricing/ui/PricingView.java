@@ -8,6 +8,7 @@ import com.translationagency.modules.tenant.domain.Tenant;
 import com.translationagency.modules.tenant.application.NumberRangeService;
 import com.translationagency.modules.tenant.domain.NumberRange;
 import com.translationagency.security.SecurityService;
+import com.translationagency.shared.ui.Confirmations;
 import com.translationagency.ui.MainLayout;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.textfield.IntegerField;
@@ -163,10 +164,14 @@ public class PricingView extends VerticalLayout {
     }
 
     private void deletePriceRule(PriceRule rule) {
+        Confirmations.delete("Preisregel loeschen",
+                "Soll diese Preisregel wirklich geloescht werden?",
+                () -> {
         String username = securityService.getAuthenticatedUser().map(org.springframework.security.core.userdetails.UserDetails::getUsername).orElse("system");
         pricingService.deletePriceRule(rule.getId(), username);
         Notification.show("Preisregel erfolgreich gelöscht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
         refreshPriceRules();
+                });
     }
 
     private void openPriceRuleDialog(PriceRule rule) {

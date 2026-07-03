@@ -7,6 +7,7 @@ import com.translationagency.modules.pricing.application.PricingService;
 import com.translationagency.modules.pricing.domain.Language;
 import com.translationagency.modules.tenant.domain.Tenant;
 import com.translationagency.security.SecurityService;
+import com.translationagency.shared.ui.Confirmations;
 import com.translationagency.ui.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -38,7 +39,7 @@ import jakarta.annotation.security.RolesAllowed;
 
 import java.util.UUID;
 
-@Route(value = "partners", layout = MainLayout.class)
+@Route(value = "partners/detail", layout = MainLayout.class)
 @PageTitle("Partner Details | Translation Management")
 @RolesAllowed({"ADMIN", "MANAGER", "CASE_WORKER"})
 public class PartnerDetailView extends VerticalLayout implements HasUrlParameter<String> {
@@ -240,11 +241,14 @@ public class PartnerDetailView extends VerticalLayout implements HasUrlParameter
         skillsGrid.addColumn(s -> s.getPricePerLine().toString() + " EUR").setHeader("Preis pro Zeile").setAutoWidth(true);
 
         skillsGrid.addComponentColumn(skill -> {
-            Button deleteBtn = new Button(VaadinIcon.TRASH.create(), e -> {
+            Button deleteBtn = new Button(VaadinIcon.TRASH.create(), e -> Confirmations.delete(
+                    "Sprachpaar loeschen",
+                    "Soll dieses Sprachpaar wirklich geloescht werden?",
+                    () -> {
                 partnerService.deleteLanguagePair(skill.getId());
                 Notification.show("Sprachpaar gelöscht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 refreshSkills();
-            });
+                    }));
             deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
             return deleteBtn;
         }).setHeader("Aktionen").setAutoWidth(true);

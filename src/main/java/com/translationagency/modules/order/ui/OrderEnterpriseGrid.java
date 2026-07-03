@@ -4,6 +4,7 @@ import com.translationagency.modules.order.application.OrderService;
 import com.translationagency.modules.order.domain.TranslationOrder;
 import com.translationagency.modules.order.domain.OrderStatus;
 import com.translationagency.shared.ui.BaseEnterpriseGrid;
+import com.translationagency.shared.ui.Confirmations;
 import com.translationagency.shared.ui.Notifications;
 import com.translationagency.shared.ui.StatusBadge;
 import com.vaadin.flow.component.grid.HeaderRow;
@@ -42,7 +43,7 @@ public class OrderEnterpriseGrid extends BaseEnterpriseGrid<TranslationOrder> {
         // Zeilenauswahl navigiert in die Detailansicht
         grid.asSingleSelect().addValueChangeListener(event -> {
             if (event.getValue() != null) {
-                getUI().ifPresent(ui -> ui.navigate("orders/" + event.getValue().getId().toString()));
+                getUI().ifPresent(ui -> ui.navigate("orders/detail/" + event.getValue().getId().toString()));
             }
         });
 
@@ -57,7 +58,7 @@ public class OrderEnterpriseGrid extends BaseEnterpriseGrid<TranslationOrder> {
     private void configureRowActions() {
         addContextMenuAction("👁️  Details öffnen",
                 o -> true,
-                o -> getUI().ifPresent(ui -> ui.navigate("orders/" + o.getId().toString())));
+                o -> getUI().ifPresent(ui -> ui.navigate("orders/detail/" + o.getId().toString())));
 
         addContextMenuAction("📦  Als geliefert markieren",
                 orderService::canDeliver,
@@ -83,13 +84,18 @@ public class OrderEnterpriseGrid extends BaseEnterpriseGrid<TranslationOrder> {
     }
 
     private void cancelOrder(TranslationOrder o) {
-        try {
-            orderService.cancelOrder(o.getId(), currentUsername);
-            Notifications.warning("Auftrag " + o.getOrderNumber() + " wurde storniert.");
-            refresh();
-        } catch (RuntimeException ex) {
-            Notifications.error("Stornierung fehlgeschlagen: " + ex.getMessage());
-        }
+        Confirmations.destructive("Auftrag stornieren",
+                "Soll der Auftrag " + o.getOrderNumber() + " wirklich storniert werden?",
+                "Stornieren",
+                () -> {
+                    try {
+                        orderService.cancelOrder(o.getId(), currentUsername);
+                        Notifications.warning("Auftrag " + o.getOrderNumber() + " wurde storniert.");
+                        refresh();
+                    } catch (RuntimeException ex) {
+                        Notifications.error("Stornierung fehlgeschlagen: " + ex.getMessage());
+                    }
+                });
     }
 
     private void reopenOrder(TranslationOrder o) {

@@ -3,6 +3,7 @@ package com.translationagency.modules.billing.ui;
 import com.translationagency.modules.billing.application.BillingService;
 import com.translationagency.modules.billing.application.DunningService;
 import com.translationagency.modules.billing.domain.*;
+import com.translationagency.modules.communication.application.CommunicationService;
 import com.translationagency.modules.document.application.PdfService;
 import com.translationagency.modules.tenant.domain.Tenant;
 import com.translationagency.security.SecurityService;
@@ -48,6 +49,7 @@ public class InvoicesView extends VerticalLayout {
     private final SecurityService securityService;
     private final PdfService pdfService;
     private final DunningService dunningService;
+    private final CommunicationService communicationService;
 
     private final Tabs tabs = new Tabs();
     private final Div contentContainer = new Div();
@@ -62,11 +64,13 @@ public class InvoicesView extends VerticalLayout {
 
     private Tenant currentTenant;
 
-    public InvoicesView(BillingService billingService, SecurityService securityService, PdfService pdfService, DunningService dunningService) {
+    public InvoicesView(BillingService billingService, SecurityService securityService, PdfService pdfService,
+                        DunningService dunningService, CommunicationService communicationService) {
         this.billingService = billingService;
         this.securityService = securityService;
         this.pdfService = pdfService;
         this.dunningService = dunningService;
+        this.communicationService = communicationService;
 
         setSizeFull();
         setSpacing(true);
@@ -128,7 +132,8 @@ public class InvoicesView extends VerticalLayout {
         invoicesLayout.setPadding(false);
 
         if (currentTenant != null) {
-            invoiceGrid = new InvoiceEnterpriseGrid(billingService, pdfService, currentTenant.getId(), this::openPaymentDialog);
+            invoiceGrid = new InvoiceEnterpriseGrid(billingService, pdfService, currentTenant.getId(),
+                    this::sendInvoiceEmail, this::openPaymentDialog);
             invoiceGrid.setSizeFull();
             invoicesLayout.add(invoiceGrid);
         }
@@ -157,9 +162,13 @@ public class InvoicesView extends VerticalLayout {
             String btnText = nextLevel == 1 ? "Erinnern" : "Mahnung Lvl " + nextLevel;
             Button remindBtn = new Button(btnText, VaadinIcon.BELL.create(), e -> {
                 try {
-                    dunningService.sendReminder(invoice, nextLevel);
+                    DunningLog log = dunningService.sendReminder(invoice, nextLevel);
+                    String username = securityService.getAuthenticatedUser()
+                            .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
+                            .orElse("system");
+                    communicationService.sendDunningEmail(log.getId(), username);
                     updateOverdueList();
-                    Notification.show("Mahnung erfolgreich erstellt").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                    Notification.show("Mahnung erfolgreich versendet").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 } catch (Exception ex) {
                     Notification.show("Fehler beim Senden: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
                 }
@@ -220,6 +229,20 @@ public class InvoicesView extends VerticalLayout {
         Button closeBtn = new Button("Schließen", e -> dialog.close());
         dialog.getFooter().add(closeBtn);
         dialog.open();
+    }
+
+    private void sendInvoiceEmail(Invoice invoice) {
+        try {
+            String username = securityService.getAuthenticatedUser()
+                    .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
+                    .orElse("system");
+            communicationService.sendInvoiceEmail(invoice.getId(), username);
+            updateInvoiceList();
+            Notification.show("Rechnung wurde per E-Mail versendet").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        } catch (Exception ex) {
+            Notification.show("Versand fehlgeschlagen: " + ex.getMessage(), 6000, Notification.Position.MIDDLE)
+                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
+        }
     }
 
     private void openPaymentDialog(Invoice invoice) {

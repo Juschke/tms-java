@@ -39,7 +39,7 @@ public class QuoteEnterpriseGrid extends BaseEnterpriseGrid<Quote> {
     private BigDecimal  filterMaxAmount    = null;
 
     public QuoteEnterpriseGrid(InquiryService inquiryService, PdfService pdfService, UUID tenantId,
-                               Consumer<Quote> onConvertToOrder, Consumer<Quote> onDelete) {
+                               Consumer<Quote> onSendEmail, Consumer<Quote> onConvertToOrder, Consumer<Quote> onDelete) {
         this.inquiryService = inquiryService;
         this.pdfService     = pdfService;
         this.tenantId       = tenantId;
@@ -52,6 +52,10 @@ public class QuoteEnterpriseGrid extends BaseEnterpriseGrid<Quote> {
             com.vaadin.flow.server.StreamRegistration registration = com.vaadin.flow.server.VaadinSession.getCurrent().getResourceRegistry().registerResource(pdfResource);
             UI.getCurrent().getPage().open(registration.getResourceUri().toString());
         });
+
+        addContextMenuAction("E-Mail versenden",
+                quote -> quote.getStatus() != QuoteStatus.ACCEPTED,
+                onSendEmail::accept);
 
         // Nur sichtbar, solange das Angebot noch nicht angenommen wurde (statusabhaengig)
         addContextMenuAction("📋 Auftrag erstellen",
@@ -84,7 +88,7 @@ public class QuoteEnterpriseGrid extends BaseEnterpriseGrid<Quote> {
         grid.asSingleSelect().addValueChangeListener(event -> {
             if (event.getValue() != null && event.getValue().getInquiry() != null) {
                 UUID inquiryId = event.getValue().getInquiry().getId();
-                getUI().ifPresent(ui -> ui.navigate("inquiries/" + inquiryId.toString()));
+                getUI().ifPresent(ui -> ui.navigate("inquiries/detail/" + inquiryId.toString()));
             }
         });
 

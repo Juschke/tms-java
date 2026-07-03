@@ -57,6 +57,12 @@
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
+		<!-- E-Mail Versand -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
 		<!-- Vaadin Flow -->
 		<dependency>
 			<groupId>com.vaadin</groupId>
