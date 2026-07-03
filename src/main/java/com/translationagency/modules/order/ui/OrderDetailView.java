@@ -806,7 +806,7 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
         Button addItemBtn = new Button("Job hinzufügen", VaadinIcon.PLUS.create(), e -> {
             TranslationOrderItem newItem = new TranslationOrderItem();
             newItem.setOrder(order);
-            openJobDetailDialog(newItem);
+            openJobDialog(newItem);
         });
         addItemBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
@@ -832,7 +832,7 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
         grid.addColumn(item -> item.getTotalPrice().toString() + " EUR").setHeader("Gesamtpreis").setAutoWidth(true);
 
         grid.addComponentColumn(item -> {
-            Button editBtn = new Button(VaadinIcon.EDIT.create(), e -> openJobDetailDialog(item));
+            Button editBtn = new Button(VaadinIcon.EDIT.create(), e -> openJobDialog(item));
             editBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
             Button deleteBtn = new Button(VaadinIcon.TRASH.create(), e -> Confirmations.delete("Job loeschen",
@@ -854,8 +854,8 @@ public class OrderDetailView extends VerticalLayout implements HasUrlParameter<S
         itemsLayout.add(sectionTitle, addItemBtn, grid);
     }
 
-    private void openJobDetailDialog(TranslationOrderItem item) {
-        JobDetailDialog dialog = new JobDetailDialog(
+    private void openJobDialog(TranslationOrderItem item) {
+        JobDialog dialog = new JobDialog(
                 pricingService,
                 partnerService,
                 item,

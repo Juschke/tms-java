@@ -16,17 +16,20 @@ public class CustomerEnterpriseGrid extends BaseEnterpriseGrid<Customer> {
     private final CustomerService customerService;
     private final UUID tenantId;
 
-    private com.vaadin.flow.component.grid.Grid.Column<Customer> numberCol;
     private com.vaadin.flow.component.grid.Grid.Column<Customer> companyCol;
-    private com.vaadin.flow.component.grid.Grid.Column<Customer> vatCol;
-    private com.vaadin.flow.component.grid.Grid.Column<Customer> cityCol;
+    private com.vaadin.flow.component.grid.Grid.Column<Customer> numberCol;
+    private com.vaadin.flow.component.grid.Grid.Column<Customer> contactCol;
+    private com.vaadin.flow.component.grid.Grid.Column<Customer> phoneCol;
+    private com.vaadin.flow.component.grid.Grid.Column<Customer> emailCol;
+    private com.vaadin.flow.component.grid.Grid.Column<Customer> addressCol;
 
     private String filterSearch = "";
     private String filterCustomerNumber = "";
     private String filterCompanyName = "";
-    private String filterVatId = "";
     private String filterCity = "";
     private String filterCountry = "";
+    private String filterContact = "";
+    private String filterPhone = "";
 
     public CustomerEnterpriseGrid(CustomerService customerService, UUID tenantId,
             Consumer<Customer> onEdit, Consumer<Customer> onDelete) {
@@ -76,20 +79,67 @@ public class CustomerEnterpriseGrid extends BaseEnterpriseGrid<Customer> {
 
     @Override
     protected void configureColumns() {
-        numberCol = addSortableTextColumn(Customer::getCustomerNumber, "Kundennummer", "customerNumber");
         companyCol = addSortableTextColumn(Customer::getCompanyName, "Firma", "companyName");
-        vatCol = addSortableTextColumn(Customer::getVatId, "USt-IdNr.", "vatId");
-        cityCol = addSortableTextColumn(
-                c -> c.getBillingAddressCity() != null ? c.getBillingAddressCity() : "–",
-                "Ort", "billingAddressCity");
+        numberCol = addSortableTextColumn(Customer::getCustomerNumber, "Kundennummer", "customerNumber");
+
+        contactCol = addSortableTextColumn(c -> {
+            var contacts = customerService.getContactPersons(c.getId());
+            if (!contacts.isEmpty()) {
+                return contacts.get(0).getFullName();
+            }
+            return "–";
+        }, "Ansprechpartner", "contactPerson");
+
+        phoneCol = addSortableTextColumn(c -> {
+            var contacts = customerService.getContactPersons(c.getId());
+            if (!contacts.isEmpty()) {
+                return contacts.get(0).getPhone() != null ? contacts.get(0).getPhone() : "–";
+            }
+            return "–";
+        }, "Telefon", "phone");
+
+        emailCol = addSortableTextColumn(c -> {
+            var contacts = customerService.getContactPersons(c.getId());
+            if (!contacts.isEmpty()) {
+                return contacts.get(0).getEmail() != null ? contacts.get(0).getEmail() : "–";
+            }
+            return "–";
+        }, "E-Mail", "email");
+
+        addressCol = addSortableTextColumn(c -> {
+            String street = c.getBillingAddressStreet() != null ? c.getBillingAddressStreet() : "";
+            String zip = c.getBillingAddressZip() != null ? c.getBillingAddressZip() : "";
+            String city = c.getBillingAddressCity() != null ? c.getBillingAddressCity() : "";
+
+            if (street.isEmpty() && zip.isEmpty() && city.isEmpty()) {
+                return "–";
+            }
+
+            StringBuilder addr = new StringBuilder();
+            if (!street.isEmpty()) addr.append(street);
+            if (!zip.isEmpty()) {
+                if (addr.length() > 0) addr.append(", ");
+                addr.append(zip);
+            }
+            if (!city.isEmpty()) {
+                if (addr.length() > 0) addr.append(" ");
+                addr.append(city);
+            }
+            return addr.toString();
+        }, "Adresse", "billingAddressCity");
     }
 
     @Override
     protected void configureFilters(HeaderRow filterRow) {
-        addTextFilter(numberCol, value -> this.filterCustomerNumber = value);
         addTextFilter(companyCol, value -> this.filterCompanyName = value);
-        addTextFilter(vatCol, value -> this.filterVatId = value);
-        addTextFilter(cityCol, value -> this.filterCity = value);
+        addTextFilter(numberCol, value -> this.filterCustomerNumber = value);
+        addTextFilter(contactCol, value -> this.filterContact = value);
+        addTextFilter(phoneCol, value -> this.filterPhone = value);
+        addTextFilter(emailCol, value -> {
+            this.filterSearch = value;
+            resetToFirstPage();
+        });
+        addTextFilter(addressCol, value -> this.filterCity = value);
     }
 
     @Override
@@ -99,7 +149,7 @@ public class CustomerEnterpriseGrid extends BaseEnterpriseGrid<Customer> {
                 filterSearch,
                 filterCustomerNumber,
                 filterCompanyName,
-                filterVatId,
+                "",
                 filterCity,
                 filterCountry,
                 pageable);
