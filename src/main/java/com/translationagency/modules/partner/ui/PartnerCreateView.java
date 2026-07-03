@@ -18,6 +18,7 @@ import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.router.PageTitle;
@@ -105,8 +106,8 @@ public class PartnerCreateView extends VerticalLayout {
         basicForm.add(partnerNumber, email);
         container.add(basicForm);
 
-        // Firma / Organisation Sektion (3 Spalten)
-        H3 companyTitle = new H3("Firma & Organisation");
+        // Firma / Organisation Sektion (3 Spalten) - Basis für alle
+        H3 companyTitle = new H3("Organisationsdaten");
         companyTitle.addClassNames("m-0", "text-m");
         container.add(companyTitle);
 
@@ -128,10 +129,26 @@ public class PartnerCreateView extends VerticalLayout {
         companyForm.add(companyName, organization, organizationUnit);
         container.add(companyForm);
 
+        // Partner-Typ Sektion (Radio Buttons)
+        H3 typeTitle = new H3("Partner-Typ");
+        typeTitle.addClassNames("m-0", "text-m");
+        container.add(typeTitle);
+
+        RadioButtonGroup<String> partnerTypeGroup = new RadioButtonGroup<>();
+        partnerTypeGroup.setItems("Privat", "Firma", "Behörde");
+        partnerTypeGroup.setValue("Privat");
+        partnerTypeGroup.setLabel("Wählen Sie den Partner-Typ:");
+        container.add(partnerTypeGroup);
+
+        // Container für dynamische Felder
+        VerticalLayout dynamicFieldsContainer = new VerticalLayout();
+        dynamicFieldsContainer.setSpacing(true);
+        dynamicFieldsContainer.setPadding(false);
+        container.add(dynamicFieldsContainer);
+
         // Personendaten Sektion (3 Spalten)
         H3 personalTitle = new H3("Personendaten");
         personalTitle.addClassNames("m-0", "text-m");
-        container.add(personalTitle);
 
         FormLayout personalForm = new FormLayout();
         personalForm.setResponsiveSteps(
@@ -163,7 +180,62 @@ public class PartnerCreateView extends VerticalLayout {
         binder.bind(phone, Partner::getPhone, Partner::setPhone);
 
         personalForm.add(salutation, title, firstName, lastName, displayName, phone);
-        container.add(personalForm);
+
+        // Firma-spezifische Felder (nur bei Typ "Firma")
+        H3 firmaDeatilsTitle = new H3("Firma-Details");
+        firmaDeatilsTitle.addClassNames("m-0", "text-m");
+
+        FormLayout firmaDetailsForm = new FormLayout();
+        firmaDetailsForm.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("600px", 2),
+                new FormLayout.ResponsiveStep("1000px", 2)
+        );
+
+        TextField registrationNumber = new TextField("Handelsregisternummer");
+        TextField taxNumber = new TextField("Steuernummer");
+
+        binder.bind(registrationNumber, Partner::getOrganization, Partner::setOrganization);
+        binder.bind(taxNumber, Partner::getTitle, Partner::setTitle);
+
+        firmaDetailsForm.add(registrationNumber, taxNumber);
+
+        // Behörden-spezifische Felder (nur bei Typ "Behörde")
+        H3 authorityDetailsTitle = new H3("Behörden-Details");
+        authorityDetailsTitle.addClassNames("m-0", "text-m");
+
+        FormLayout authorityDetailsForm = new FormLayout();
+        authorityDetailsForm.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("600px", 2),
+                new FormLayout.ResponsiveStep("1000px", 2)
+        );
+
+        TextField leitwegId = new TextField("Leitweg-ID (XRechnung)");
+        leitwegId.setRequiredIndicatorVisible(true);
+
+        binder.bind(leitwegId, Partner::getOrganization, Partner::setOrganization);
+
+        authorityDetailsForm.add(leitwegId);
+
+        // Listener für Partner-Typ Änderung
+        partnerTypeGroup.addValueChangeListener(event -> {
+            dynamicFieldsContainer.removeAll();
+            String selectedType = event.getValue();
+
+            // Immer Personendaten anzeigen
+            dynamicFieldsContainer.add(personalTitle, personalForm);
+
+            // Je nach Typ zusätzliche Felder hinzufügen
+            if ("Firma".equals(selectedType)) {
+                dynamicFieldsContainer.add(firmaDeatilsTitle, firmaDetailsForm);
+            } else if ("Behörde".equals(selectedType)) {
+                dynamicFieldsContainer.add(authorityDetailsTitle, authorityDetailsForm);
+            }
+        });
+
+        // Initial: Privat ist ausgewählt, also nur Personendaten
+        dynamicFieldsContainer.add(personalTitle, personalForm);
 
         // Adresse Sektion (3 Spalten)
         H3 addressTitle = new H3("Anschrift");
