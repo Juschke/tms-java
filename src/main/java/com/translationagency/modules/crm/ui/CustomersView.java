@@ -60,7 +60,8 @@ public class CustomersView extends VerticalLayout {
 
         if (currentTenant != null) {
             grid = new CustomerEnterpriseGrid(customerService, currentTenant.getId(),
-                    this::openCustomerDialog, this::deleteCustomer);
+                    customer -> getUI().ifPresent(ui -> ui.navigate("customers/detail/" + customer.getId().toString())),
+                    this::deleteCustomer);
         }
 
         add(createHeaderLayout());
@@ -74,7 +75,8 @@ public class CustomersView extends VerticalLayout {
         H2 headerTitle = new H2("Kundenverwaltung");
         headerTitle.addClassNames("m-0", "text-xl");
 
-        Button addCustomerButton = new Button("Neuer Kunde", VaadinIcon.PLUS.create(), e -> openCustomerDialog(new Customer()));
+        Button addCustomerButton = new Button("Neuer Kunde", VaadinIcon.PLUS.create(),
+                e -> getUI().ifPresent(ui -> ui.navigate("customers/create")));
         addCustomerButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         Button importButton = new Button("CSV Import", VaadinIcon.UPLOAD.create(), e -> openCustomerImportDialog());
@@ -232,67 +234,6 @@ public class CustomersView extends VerticalLayout {
                 });
     }
 
-    private void openCustomerDialog(Customer customer) {
-        Dialog dialog = new Dialog();
-        dialog.setHeaderTitle(customer.getId() == null ? "Neuen Kunden anlegen" : "Kunden bearbeiten");
-
-        FormLayout formLayout = new FormLayout();
-        TextField customerNumber = new TextField("Kundennummer");
-        TextField companyName = new TextField("Firmenname");
-        TextField vatId = new TextField("USt-IdNr.");
-        TextField leitwegId = new TextField("Leitweg-ID (XRechnung)");
-        TextField street = new TextField("Straße");
-        TextField zip = new TextField("PLZ");
-        TextField city = new TextField("Ort");
-        TextField country = new TextField("Land (Ländercode)");
-
-        formLayout.setResponsiveSteps(
-                new FormLayout.ResponsiveStep("0", 1),
-                new FormLayout.ResponsiveStep("500px", 2)
-        );
-        formLayout.add(customerNumber, companyName, vatId, leitwegId, street, zip, city, country);
-
-        Binder<Customer> binder = new Binder<>(Customer.class);
-        binder.forField(customerNumber).asRequired("Kundennummer ist erforderlich").bind(Customer::getCustomerNumber, Customer::setCustomerNumber);
-        binder.forField(companyName).asRequired("Firmenname ist erforderlich").bind(Customer::getCompanyName, Customer::setCompanyName);
-        binder.bind(vatId, Customer::getVatId, Customer::setVatId);
-        binder.bind(leitwegId, Customer::getLeitwegId, Customer::setLeitwegId);
-        binder.bind(street, Customer::getBillingAddressStreet, Customer::setBillingAddressStreet);
-        binder.bind(zip, Customer::getBillingAddressZip, Customer::setBillingAddressZip);
-        binder.bind(city, Customer::getBillingAddressCity, Customer::setBillingAddressCity);
-        binder.bind(country, Customer::getBillingAddressCountry, Customer::setBillingAddressCountry);
-
-        binder.readBean(customer);
-
-        Button saveButton = new Button("Speichern", e -> {
-            try {
-                binder.writeBean(customer);
-                customer.setTenant(currentTenant);
-                String username = securityService.getAuthenticatedUser()
-                        .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
-                        .orElse("system");
-                if (customer.getId() == null) {
-                    customer.setCreatedBy(username);
-                }
-                customer.setUpdatedBy(username);
-                customerService.saveCustomer(customer);
-                dialog.close();
-                updateList();
-                com.translationagency.shared.ui.Notifications.success(
-                        "Kunde " + (customer.getCustomerNumber() != null ? customer.getCustomerNumber() + " " : "")
-                                + "erfolgreich gespeichert");
-            } catch (Exception ex) {
-                com.translationagency.shared.ui.Notifications.error("Fehler beim Speichern: " + ex.getMessage());
-            }
-        });
-        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-
-        Button cancelButton = new Button("Abbrechen", e -> dialog.close());
-
-        dialog.getFooter().add(cancelButton, saveButton);
-        dialog.add(formLayout);
-        dialog.open();
-    }
 
     private String valueAt(List<String> values, int index) {
         return index < values.size() && values.get(index) != null ? values.get(index).trim() : "";
