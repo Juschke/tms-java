@@ -16,10 +16,13 @@ import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.Hr;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
 
@@ -58,19 +61,76 @@ public class MainLayout extends AppLayout {
     }
 
     private void createDrawer() {
-        SideNav nav = new SideNav();
-        nav.addItem(new SideNavItem("Dashboard", DashboardView.class, VaadinIcon.DASHBOARD.create()));
-        nav.addItem(new SideNavItem("Kunden", CustomersView.class, VaadinIcon.USERS.create()));
-        nav.addItem(new SideNavItem("Partner", PartnersView.class, VaadinIcon.HANDSHAKE.create()));
-        nav.addItem(new SideNavItem("Anfragen", InquiriesView.class, VaadinIcon.QUESTION.create()));
-        nav.addItem(new SideNavItem("Angebote", QuotesView.class, VaadinIcon.FILE_TEXT.create()));
-        nav.addItem(new SideNavItem("Projekte", OrdersView.class, VaadinIcon.TASKS.create()));
-        nav.addItem(new SideNavItem("Rechnungen", InvoicesView.class, VaadinIcon.MONEY.create()));
-        nav.addItem(
-                new SideNavItem("Eingangsrechnungen & Kosten", VendorInvoicesView.class, VaadinIcon.RECORDS.create()));
-        nav.addItem(new SideNavItem("Preise & Tarife", PricingView.class, VaadinIcon.COINS.create()));
-        nav.addItem(new SideNavItem("Einstellungen", SettingsView.class, VaadinIcon.COG.create()));
+        VerticalLayout drawerLayout = new VerticalLayout();
+        drawerLayout.setPadding(false);
+        drawerLayout.setSpacing(false);
 
-        addToDrawer(nav);
+        // Dashboard
+        SideNav dashboardNav = new SideNav();
+        dashboardNav.addItem(new SideNavItem("Dashboard", DashboardView.class, VaadinIcon.DASHBOARD.create()));
+        drawerLayout.add(dashboardNav);
+
+        // Trennlinie
+        Hr separator1 = new Hr();
+        separator1.addClassNames("my-m");
+        drawerLayout.add(separator1);
+
+        // Arbeitsprozess: Anfragen -> Angebote -> Projekte
+        H3 workflowTitle = new H3("Arbeitsprozess");
+        workflowTitle.addClassNames("text-xs", "text-secondary", "m-0", "px-m", "py-s");
+        drawerLayout.add(workflowTitle);
+
+        SideNav workflowNav = new SideNav();
+        workflowNav.addItem(new SideNavItem("Anfragen", InquiriesView.class, VaadinIcon.QUESTION.create()));
+        workflowNav.addItem(new SideNavItem("Angebote", QuotesView.class, VaadinIcon.FILE_TEXT.create()));
+        workflowNav.addItem(new SideNavItem("Projekte", OrdersView.class, VaadinIcon.TASKS.create()));
+        drawerLayout.add(workflowNav);
+
+        // Trennlinie
+        Hr separator2 = new Hr();
+        separator2.addClassNames("my-m");
+        drawerLayout.add(separator2);
+
+        // Verwaltung: Kunden & Partner
+        H3 managementTitle = new H3("Verwaltung");
+        managementTitle.addClassNames("text-xs", "text-secondary", "m-0", "px-m", "py-s");
+        drawerLayout.add(managementTitle);
+
+        SideNav managementNav = new SideNav();
+        managementNav.addItem(new SideNavItem("Kunden", CustomersView.class, VaadinIcon.USERS.create()));
+        managementNav.addItem(new SideNavItem("Partner", PartnersView.class, VaadinIcon.HANDSHAKE.create()));
+        drawerLayout.add(managementNav);
+
+        // Trennlinie
+        Hr separator3 = new Hr();
+        separator3.addClassNames("my-m");
+        drawerLayout.add(separator3);
+
+        // Finanzen: Rechnungen & Tarife
+        H3 financeTitle = new H3("Finanzen");
+        financeTitle.addClassNames("text-xs", "text-secondary", "m-0", "px-m", "py-s");
+        drawerLayout.add(financeTitle);
+
+        SideNav financeNav = new SideNav();
+        financeNav.addItem(new SideNavItem("Rechnungen", InvoicesView.class, VaadinIcon.MONEY.create()));
+        financeNav.addItem(new SideNavItem("Fremdkosten", VendorInvoicesView.class, VaadinIcon.RECORDS.create()));
+        financeNav.addItem(new SideNavItem("Preise & Tarife", PricingView.class, VaadinIcon.COINS.create()));
+        drawerLayout.add(financeNav);
+
+        // Trennlinie
+        Hr separator4 = new Hr();
+        separator4.addClassNames("my-m");
+        drawerLayout.add(separator4);
+
+        // System
+        H3 systemTitle = new H3("System");
+        systemTitle.addClassNames("text-xs", "text-secondary", "m-0", "px-m", "py-s");
+        drawerLayout.add(systemTitle);
+
+        SideNav systemNav = new SideNav();
+        systemNav.addItem(new SideNavItem("Einstellungen", SettingsView.class, VaadinIcon.COG.create()));
+        drawerLayout.add(systemNav);
+
+        addToDrawer(drawerLayout);
     }
 }
