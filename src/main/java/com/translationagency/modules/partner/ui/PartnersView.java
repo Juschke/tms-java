@@ -72,7 +72,8 @@ public class PartnersView extends VerticalLayout {
         H2 headerTitle = new H2("Partner & Übersetzer");
         headerTitle.addClassNames("m-0", "text-xl");
 
-        Button addPartnerButton = new Button("Neuer Partner", VaadinIcon.PLUS.create(), e -> openPartnerDialog(new Partner()));
+        Button addPartnerButton = new Button("Neuer Partner", VaadinIcon.PLUS.create(),
+                e -> getUI().ifPresent(ui -> ui.navigate("partners/create")));
         addPartnerButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         Button importButton = new Button("CSV Import", VaadinIcon.UPLOAD.create(), e -> openPartnerImportDialog());
@@ -243,61 +244,6 @@ public class PartnersView extends VerticalLayout {
                 });
     }
 
-    private void openPartnerDialog(Partner partner) {
-        Dialog dialog = new Dialog();
-        dialog.setHeaderTitle(partner.getId() == null ? "Neuen Partner anlegen" : "Partner bearbeiten");
-
-        FormLayout formLayout = new FormLayout();
-        TextField companyName = new TextField("Firmenname (optional)");
-        TextField firstName = new TextField("Vorname");
-        TextField lastName = new TextField("Nachname");
-        TextField email = new TextField("E-Mail");
-        TextField phone = new TextField("Telefon");
-
-        formLayout.setResponsiveSteps(
-                new FormLayout.ResponsiveStep("0", 1),
-                new FormLayout.ResponsiveStep("500px", 2)
-        );
-        formLayout.add(companyName, firstName, lastName, email, phone);
-
-        Binder<Partner> binder = new Binder<>(Partner.class);
-        binder.bind(companyName, Partner::getCompanyName, Partner::setCompanyName);
-        binder.forField(firstName).asRequired("Vorname ist erforderlich").bind(Partner::getFirstName, Partner::setFirstName);
-        binder.forField(lastName).asRequired("Nachname ist erforderlich").bind(Partner::getLastName, Partner::setLastName);
-        binder.forField(email).asRequired("E-Mail ist erforderlich").bind(Partner::getEmail, Partner::setEmail);
-        binder.bind(phone, Partner::getPhone, Partner::setPhone);
-
-        binder.readBean(partner);
-
-        Button saveButton = new Button("Speichern", e -> {
-            try {
-                binder.writeBean(partner);
-                partner.setTenant(currentTenant);
-                String username = securityService.getAuthenticatedUser()
-                        .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
-                        .orElse("system");
-                if (partner.getId() == null) {
-                    partner.setCreatedBy(username);
-                }
-                partner.setUpdatedBy(username);
-                partnerService.savePartner(partner);
-                dialog.close();
-                updateList();
-                com.translationagency.shared.ui.Notifications.success(
-                        "Partner " + (partner.getPartnerNumber() != null ? partner.getPartnerNumber() + " " : "")
-                                + "erfolgreich gespeichert");
-            } catch (Exception ex) {
-                com.translationagency.shared.ui.Notifications.error("Fehler beim Speichern: " + ex.getMessage());
-            }
-        });
-        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-
-        Button cancelButton = new Button("Abbrechen", e -> dialog.close());
-
-        dialog.getFooter().add(cancelButton, saveButton);
-        dialog.add(formLayout);
-        dialog.open();
-    }
 
     private boolean booleanAt(List<String> values, int index, boolean defaultValue) {
         String value = valueAt(values, index);
