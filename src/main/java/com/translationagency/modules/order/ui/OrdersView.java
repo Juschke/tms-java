@@ -17,8 +17,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Route(value = "orders", layout = MainLayout.class)
-@PageTitle("Aufträge | Translation Management")
-@RolesAllowed({"ADMIN", "MANAGER", "CASE_WORKER"})
+@PageTitle("Projekte | Translation Management")
+@RolesAllowed({ "ADMIN", "MANAGER", "CASE_WORKER" })
 public class OrdersView extends VerticalLayout {
 
     private final OrderService orderService;
@@ -53,7 +53,7 @@ public class OrdersView extends VerticalLayout {
     }
 
     private HorizontalLayout createHeaderLayout() {
-        H2 headerTitle = new H2("Auftragsverwaltung");
+        H2 headerTitle = new H2("Projektverwaltung");
         headerTitle.addClassNames("m-0", "text-xl");
 
         HorizontalLayout header = new HorizontalLayout(headerTitle);

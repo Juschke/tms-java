@@ -14,24 +14,24 @@ import java.util.function.Consumer;
 public class CustomerEnterpriseGrid extends BaseEnterpriseGrid<Customer> {
 
     private final CustomerService customerService;
-    private final UUID            tenantId;
+    private final UUID tenantId;
 
     private com.vaadin.flow.component.grid.Grid.Column<Customer> numberCol;
     private com.vaadin.flow.component.grid.Grid.Column<Customer> companyCol;
     private com.vaadin.flow.component.grid.Grid.Column<Customer> vatCol;
     private com.vaadin.flow.component.grid.Grid.Column<Customer> cityCol;
 
-    private String filterSearch         = "";
+    private String filterSearch = "";
     private String filterCustomerNumber = "";
-    private String filterCompanyName    = "";
-    private String filterVatId          = "";
-    private String filterCity           = "";
-    private String filterCountry        = "";
+    private String filterCompanyName = "";
+    private String filterVatId = "";
+    private String filterCity = "";
+    private String filterCountry = "";
 
     public CustomerEnterpriseGrid(CustomerService customerService, UUID tenantId,
-                                  Consumer<Customer> onEdit, Consumer<Customer> onDelete) {
+            Consumer<Customer> onEdit, Consumer<Customer> onDelete) {
         this.customerService = customerService;
-        this.tenantId        = tenantId;
+        this.tenantId = tenantId;
 
         // Wire edit & delete actions
         setEditAction(onEdit);
@@ -57,27 +57,39 @@ public class CustomerEnterpriseGrid extends BaseEnterpriseGrid<Customer> {
             }
         });
 
+        configureRowActions();
+
         // Initialize the first data load
         initialize();
     }
 
+    private void configureRowActions() {
+        addContextMenuAction("👁️  Details öffnen",
+                c -> getUI().ifPresent(ui -> ui.navigate("customers/detail/" + c.getId().toString())));
+
+        addContextMenuAction("📧  E-Mail schreiben", c -> {
+            com.vaadin.flow.component.UI.getCurrent().getPage().open("mailto:info@example.com", "_blank"); // Platzhalter
+                                                                                                           // für echte
+                                                                                                           // Logik
+        });
+    }
+
     @Override
     protected void configureColumns() {
-        numberCol  = addSortableTextColumn(Customer::getCustomerNumber, "Kundennummer", "customerNumber");
+        numberCol = addSortableTextColumn(Customer::getCustomerNumber, "Kundennummer", "customerNumber");
         companyCol = addSortableTextColumn(Customer::getCompanyName, "Firma", "companyName");
-        vatCol     = addSortableTextColumn(Customer::getVatId, "USt-IdNr.", "vatId");
-        cityCol    = addSortableTextColumn(
+        vatCol = addSortableTextColumn(Customer::getVatId, "USt-IdNr.", "vatId");
+        cityCol = addSortableTextColumn(
                 c -> c.getBillingAddressCity() != null ? c.getBillingAddressCity() : "–",
-                "Ort", "billingAddressCity"
-        );
+                "Ort", "billingAddressCity");
     }
 
     @Override
     protected void configureFilters(HeaderRow filterRow) {
-        addTextFilter(numberCol,  value -> this.filterCustomerNumber = value);
-        addTextFilter(companyCol, value -> this.filterCompanyName    = value);
-        addTextFilter(vatCol,     value -> this.filterVatId          = value);
-        addTextFilter(cityCol,    value -> this.filterCity           = value);
+        addTextFilter(numberCol, value -> this.filterCustomerNumber = value);
+        addTextFilter(companyCol, value -> this.filterCompanyName = value);
+        addTextFilter(vatCol, value -> this.filterVatId = value);
+        addTextFilter(cityCol, value -> this.filterCity = value);
     }
 
     @Override
@@ -90,7 +102,6 @@ public class CustomerEnterpriseGrid extends BaseEnterpriseGrid<Customer> {
                 filterVatId,
                 filterCity,
                 filterCountry,
-                pageable
-        );
+                pageable);
     }
 }

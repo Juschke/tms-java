@@ -87,7 +87,8 @@ public class VendorInvoicesView extends VerticalLayout {
         add(createHeaderLayout());
 
         createTabs();
-        add(tabs, contentContainer);
+        add(tabs);
+        add(contentContainer);
         contentContainer.setSizeFull();
 
         if (currentTenant != null) {

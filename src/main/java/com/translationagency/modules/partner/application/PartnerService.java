@@ -21,8 +21,8 @@ public class PartnerService {
     private final NumberRangeService numberRangeService;
 
     public PartnerService(PartnerRepository partnerRepository,
-                          PartnerLanguagePairRepository partnerLanguagePairRepository,
-                          NumberRangeService numberRangeService) {
+            PartnerLanguagePairRepository partnerLanguagePairRepository,
+            NumberRangeService numberRangeService) {
         this.partnerRepository = partnerRepository;
         this.partnerLanguagePairRepository = partnerLanguagePairRepository;
         this.numberRangeService = numberRangeService;
@@ -31,6 +31,14 @@ public class PartnerService {
     @Transactional(readOnly = true)
     public List<Partner> getAllPartners(UUID tenantId) {
         return partnerRepository.findByTenantIdAndDeletedAtIsNull(tenantId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Partner> findPartnersByLanguagePair(UUID tenantId, UUID sourceLangId, UUID targetLangId) {
+        if (sourceLangId == null || targetLangId == null) {
+            return List.of();
+        }
+        return partnerRepository.findByLanguagePair(tenantId, sourceLangId, targetLangId);
     }
 
     @Transactional(readOnly = true)
@@ -57,12 +65,12 @@ public class PartnerService {
                 isTranslator,
                 isInterpreter,
                 isActive,
-                pageable
-        );
+                pageable);
     }
 
     public Partner savePartner(Partner partner) {
-        // Partnernummer nur bei Neuanlage fortlaufend vergeben; bestehende bleiben unveraendert.
+        // Partnernummer nur bei Neuanlage fortlaufend vergeben; bestehende bleiben
+        // unveraendert.
         if ((partner.getPartnerNumber() == null || partner.getPartnerNumber().isBlank())
                 && partner.getTenant() != null) {
             partner.setPartnerNumber(

@@ -110,7 +110,12 @@ public class SettingsView extends VerticalLayout {
 
         H2 headerTitle = new H2("Einstellungen");
         headerTitle.addClassNames("m-0", "text-xl");
-        add(headerTitle);
+
+        HorizontalLayout header = new HorizontalLayout(headerTitle);
+        header.setWidthFull();
+        header.expand(headerTitle);
+        header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
+        add(header);
 
         if (currentTenant == null) {
             add(new Span("Kein Mandant fuer den aktuellen Benutzer gefunden."));

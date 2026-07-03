@@ -20,26 +20,27 @@ public class InquiryEnterpriseGrid extends BaseEnterpriseGrid<Inquiry> {
 
     private final InquiryService inquiryService;
     private final PricingService pricingService;
-    private final UUID           tenantId;
+    private final UUID tenantId;
 
+    private com.vaadin.flow.component.grid.Grid.Column<Inquiry> customerNumberCol;
     private com.vaadin.flow.component.grid.Grid.Column<Inquiry> customerCol;
     private com.vaadin.flow.component.grid.Grid.Column<Inquiry> serviceCol;
     private com.vaadin.flow.component.grid.Grid.Column<Inquiry> statusCol;
     private com.vaadin.flow.component.grid.Grid.Column<Inquiry> sourceLangCol;
     private com.vaadin.flow.component.grid.Grid.Column<Inquiry> targetLangCol;
 
-    private String        filterSearch           = "";
-    private String        filterCustomerName     = "";
-    private InquiryStatus filterStatus           = null;
-    private UUID          filterSourceLanguageId = null;
-    private UUID          filterTargetLanguageId = null;
-    private Boolean       filterIsExpress        = null;
-    private Boolean       filterIsCertified      = null;
+    private String filterSearch = "";
+    private String filterCustomerName = "";
+    private InquiryStatus filterStatus = null;
+    private UUID filterSourceLanguageId = null;
+    private UUID filterTargetLanguageId = null;
+    private Boolean filterIsExpress = null;
+    private Boolean filterIsCertified = null;
 
     public InquiryEnterpriseGrid(InquiryService inquiryService, PricingService pricingService, UUID tenantId) {
         this.inquiryService = inquiryService;
         this.pricingService = pricingService;
-        this.tenantId       = tenantId;
+        this.tenantId = tenantId;
 
         // Enable general search
         enableGeneralSearch(value -> this.filterSearch = value);
@@ -74,21 +75,58 @@ public class InquiryEnterpriseGrid extends BaseEnterpriseGrid<Inquiry> {
             }
         });
 
+        configureRowActions();
+
         initialize();
+    }
+
+    private void configureRowActions() {
+        addContextMenuAction("👁️  Details öffnen",
+                inq -> getUI().ifPresent(ui -> ui.navigate("inquiries/detail/" + inq.getId().toString())));
+
+        addContextMenuAction("📄  Angebot erstellen",
+                inq -> inq.getStatus() != InquiryStatus.REJECTED && inq.getStatus() != InquiryStatus.CANCELLED
+                        && inq.getStatus() != InquiryStatus.QUOTE_PREPARED
+                        && inq.getStatus() != InquiryStatus.QUOTE_SENT && inq.getStatus() != InquiryStatus.ACCEPTED,
+                inq -> {
+                    // Navigate to details where they can calculate the quote, or ideally do it here
+                    // if possible.
+                    // Better to just navigate.
+                    getUI().ifPresent(ui -> ui.navigate("inquiries/detail/" + inq.getId().toString()));
+                    com.translationagency.shared.ui.Notifications
+                            .success("Bitte im Tab 'Kalkulation & Angebot' fortfahren.");
+                });
+
+        addContextMenuAction("❌  Ablehnen",
+                inq -> inq.getStatus() != InquiryStatus.REJECTED && inq.getStatus() != InquiryStatus.CANCELLED,
+                inq -> {
+                    inq.setStatus(InquiryStatus.REJECTED);
+                    inquiryService.saveInquiry(inq);
+                    com.translationagency.shared.ui.Notifications.warning("Anfrage wurde abgelehnt.");
+                    refresh();
+                });
     }
 
     @Override
     protected void configureColumns() {
+        customerNumberCol = addSortableTextColumn(
+                inq -> inq.getCustomer() != null && inq.getCustomer().getCustomerNumber() != null
+                        ? inq.getCustomer().getCustomerNumber()
+                        : "–",
+                "Kundennummer", "customer.customerNumber");
+
         customerCol = addSortableTextColumn(inq -> inq.getCustomer() != null ? inq.getCustomer().getCompanyName() : "–",
                 "Kunde", "customer.companyName");
 
-        serviceCol  = addSortableTextColumn(inq -> inq.getServiceType() != null ? inq.getServiceType().getName() : "–",
+        serviceCol = addSortableTextColumn(inq -> inq.getServiceType() != null ? inq.getServiceType().getName() : "–",
                 "Leistungsart", "serviceType.name");
 
-        sourceLangCol = addSortableTextColumn(inq -> inq.getSourceLanguage() != null ? inq.getSourceLanguage().getName() : "–",
+        sourceLangCol = addSortableTextColumn(
+                inq -> inq.getSourceLanguage() != null ? inq.getSourceLanguage().getName() : "–",
                 "Quellsprache", "sourceLanguage.name");
 
-        targetLangCol = addSortableTextColumn(inq -> inq.getTargetLanguage() != null ? inq.getTargetLanguage().getName() : "–",
+        targetLangCol = addSortableTextColumn(
+                inq -> inq.getTargetLanguage() != null ? inq.getTargetLanguage().getName() : "–",
                 "Zielsprache", "targetLanguage.name");
 
         addSortableTextColumn(inq -> {
@@ -101,20 +139,32 @@ public class InquiryEnterpriseGrid extends BaseEnterpriseGrid<Inquiry> {
         }, "Umfang", "wordCount");
 
         statusCol = addTextColumn(inq -> {
-            if (inq.getStatus() == null) return "–";
+            if (inq.getStatus() == null)
+                return "–";
             switch (inq.getStatus()) {
-                case RECEIVED: return "Eingegangen";
-                case IN_CALCULATION: return "Kalkulation";
-                case QUOTE_PREPARED: return "Angebot vorbereitet";
-                case QUOTE_SENT: return "Angebot gesendet";
-                case ACCEPTED: return "Angenommen";
-                case REJECTED: return "Abgelehnt";
-                case CANCELLED: return "Storniert";
-                default: return inq.getStatus().name();
+                case RECEIVED:
+                    return "Eingegangen";
+                case IN_CALCULATION:
+                    return "Kalkulation";
+                case QUOTE_PREPARED:
+                    return "Angebot vorbereitet";
+                case QUOTE_SENT:
+                    return "Angebot gesendet";
+                case ACCEPTED:
+                    return "Angenommen";
+                case REJECTED:
+                    return "Abgelehnt";
+                case CANCELLED:
+                    return "Storniert";
+                default:
+                    return inq.getStatus().name();
             }
         }, "Status");
 
-        addSortableTextColumn(inq -> inq.getCreatedAt() != null ? inq.getCreatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "–",
+        addSortableTextColumn(
+                inq -> inq.getCreatedAt() != null
+                        ? inq.getCreatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+                        : "–",
                 "Datum", "createdAt");
     }
 
@@ -144,7 +194,6 @@ public class InquiryEnterpriseGrid extends BaseEnterpriseGrid<Inquiry> {
                 filterTargetLanguageId,
                 filterIsExpress,
                 filterIsCertified,
-                pageable
-        );
+                pageable);
     }
 }

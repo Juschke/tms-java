@@ -76,7 +76,7 @@ public class OrderEnterpriseGrid extends BaseEnterpriseGrid<TranslationOrder> {
     private void deliverOrder(TranslationOrder o) {
         try {
             orderService.markAsDelivered(o.getId(), currentUsername);
-            Notifications.success("Auftrag " + o.getOrderNumber() + " als geliefert markiert.");
+            Notifications.success("Projekt " + o.getOrderNumber() + " als geliefert markiert.");
             refresh();
         } catch (RuntimeException ex) {
             Notifications.error("Aktion fehlgeschlagen: " + ex.getMessage());
@@ -84,13 +84,13 @@ public class OrderEnterpriseGrid extends BaseEnterpriseGrid<TranslationOrder> {
     }
 
     private void cancelOrder(TranslationOrder o) {
-        Confirmations.destructive("Auftrag stornieren",
-                "Soll der Auftrag " + o.getOrderNumber() + " wirklich storniert werden?",
+        Confirmations.destructive("Projekt stornieren",
+                "Soll der Projekt " + o.getOrderNumber() + " wirklich storniert werden?",
                 "Stornieren",
                 () -> {
                     try {
                         orderService.cancelOrder(o.getId(), currentUsername);
-                        Notifications.warning("Auftrag " + o.getOrderNumber() + " wurde storniert.");
+                        Notifications.warning("Projekt " + o.getOrderNumber() + " wurde storniert.");
                         refresh();
                     } catch (RuntimeException ex) {
                         Notifications.error("Stornierung fehlgeschlagen: " + ex.getMessage());
@@ -101,7 +101,7 @@ public class OrderEnterpriseGrid extends BaseEnterpriseGrid<TranslationOrder> {
     private void reopenOrder(TranslationOrder o) {
         try {
             orderService.reopenOrder(o.getId(), currentUsername);
-            Notifications.success("Auftrag " + o.getOrderNumber() + " wurde reaktiviert.");
+            Notifications.success("Projekt " + o.getOrderNumber() + " wurde reaktiviert.");
             refresh();
         } catch (RuntimeException ex) {
             Notifications.error("Reaktivierung fehlgeschlagen: " + ex.getMessage());
@@ -110,7 +110,7 @@ public class OrderEnterpriseGrid extends BaseEnterpriseGrid<TranslationOrder> {
 
     @Override
     protected void configureColumns() {
-        numberCol   = addSortableTextColumn(TranslationOrder::getOrderNumber, "Auftragsnummer", "orderNumber");
+        numberCol   = addSortableTextColumn(TranslationOrder::getOrderNumber, "Projektsnummer", "orderNumber");
         customerCol = addSortableTextColumn(o -> o.getCustomer() != null ? o.getCustomer().getCompanyName() : "–",
                 "Kunde", "customer.companyName");
 

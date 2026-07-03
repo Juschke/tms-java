@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 
 @Route(value = "invoices", layout = MainLayout.class)
 @PageTitle("Rechnungen | Translation Management")
-@RolesAllowed({"ADMIN", "MANAGER", "CASE_WORKER"})
+@RolesAllowed({ "ADMIN", "MANAGER", "CASE_WORKER" })
 public class InvoicesView extends VerticalLayout {
 
     private final BillingService billingService;
@@ -65,7 +65,7 @@ public class InvoicesView extends VerticalLayout {
     private Tenant currentTenant;
 
     public InvoicesView(BillingService billingService, SecurityService securityService, PdfService pdfService,
-                        DunningService dunningService, CommunicationService communicationService) {
+            DunningService dunningService, CommunicationService communicationService) {
         this.billingService = billingService;
         this.securityService = securityService;
         this.pdfService = pdfService;
@@ -90,7 +90,7 @@ public class InvoicesView extends VerticalLayout {
     }
 
     private HorizontalLayout createHeaderLayout() {
-        H2 headerTitle = new H2("Rechnungen & Finanzen");
+        H2 headerTitle = new H2("Rechnungen");
         headerTitle.addClassNames("m-0", "text-xl");
 
         HorizontalLayout header = new HorizontalLayout(headerTitle);
@@ -146,10 +146,14 @@ public class InvoicesView extends VerticalLayout {
 
         overdueGrid.setSizeFull();
         overdueGrid.addColumn(Invoice::getInvoiceNumber).setHeader("Rechnungsnummer").setAutoWidth(true);
-        overdueGrid.addColumn(inv -> inv.getCustomer() != null ? inv.getCustomer().getCompanyName() : "-").setHeader("Kunde").setAutoWidth(true);
-        overdueGrid.addColumn(inv -> inv.getDueAt() != null ? inv.getDueAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) : "-").setHeader("Fälligkeitsdatum").setAutoWidth(true);
+        overdueGrid.addColumn(inv -> inv.getCustomer() != null ? inv.getCustomer().getCompanyName() : "-")
+                .setHeader("Kunde").setAutoWidth(true);
+        overdueGrid.addColumn(
+                inv -> inv.getDueAt() != null ? inv.getDueAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) : "-")
+                .setHeader("Fälligkeitsdatum").setAutoWidth(true);
         overdueGrid.addColumn(inv -> {
-            if (inv.getDueAt() == null) return "-";
+            if (inv.getDueAt() == null)
+                return "-";
             long days = ChronoUnit.DAYS.between(inv.getDueAt().toLocalDate(), LocalDate.now());
             return days > 0 ? days + " Tage" : "0 Tage";
         }).setHeader("Überfällig seit").setAutoWidth(true);
@@ -168,9 +172,11 @@ public class InvoicesView extends VerticalLayout {
                             .orElse("system");
                     communicationService.sendDunningEmail(log.getId(), username);
                     updateOverdueList();
-                    Notification.show("Mahnung erfolgreich versendet").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                    Notification.show("Mahnung erfolgreich versendet")
+                            .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 } catch (Exception ex) {
-                    Notification.show("Fehler beim Senden: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                    Notification.show("Fehler beim Senden: " + ex.getMessage())
+                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
                 }
             });
             remindBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
@@ -212,9 +218,11 @@ public class InvoicesView extends VerticalLayout {
         Grid<DunningLog> historyGrid = new Grid<>(DunningLog.class, false);
         historyGrid.addColumn(DunningLog::getLevel).setHeader("Mahnstufe").setAutoWidth(true);
         historyGrid.addColumn(log -> log.getFeeAmount().toString() + " EUR").setHeader("Gebühr").setAutoWidth(true);
-        historyGrid.addColumn(log -> log.getSentAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))).setHeader("Gesendet am").setAutoWidth(true);
+        historyGrid.addColumn(log -> log.getSentAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")))
+                .setHeader("Gesendet am").setAutoWidth(true);
         historyGrid.addComponentColumn(log -> {
-            StreamResource pdfResource = new StreamResource("dunning_lvl_" + log.getLevel() + ".pdf", () -> dunningService.downloadDunningPdf(log));
+            StreamResource pdfResource = new StreamResource("dunning_lvl_" + log.getLevel() + ".pdf",
+                    () -> dunningService.downloadDunningPdf(log));
             Anchor downloadLink = new Anchor(pdfResource, "");
             downloadLink.getElement().setAttribute("download", true);
             Button downloadBtn = new Button(VaadinIcon.DOWNLOAD.create());
@@ -274,8 +282,7 @@ public class InvoicesView extends VerticalLayout {
                     BigDecimal.valueOf(amountField.getValue()),
                     methodCombo.getValue(),
                     refField.getValue(),
-                    username
-            );
+                    username);
             dialog.close();
             updateInvoiceList();
             Notification.show("Zahlung erfolgreich verbucht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);

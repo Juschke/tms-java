@@ -29,7 +29,7 @@ public class MainLayout extends AppLayout {
 
     public MainLayout(SecurityService securityService) {
         this.securityService = securityService;
-        
+
         createHeader();
         createDrawer();
     }
@@ -61,12 +61,13 @@ public class MainLayout extends AppLayout {
         SideNav nav = new SideNav();
         nav.addItem(new SideNavItem("Dashboard", DashboardView.class, VaadinIcon.DASHBOARD.create()));
         nav.addItem(new SideNavItem("Kunden", CustomersView.class, VaadinIcon.USERS.create()));
+        nav.addItem(new SideNavItem("Partner", PartnersView.class, VaadinIcon.HANDSHAKE.create()));
         nav.addItem(new SideNavItem("Anfragen", InquiriesView.class, VaadinIcon.QUESTION.create()));
         nav.addItem(new SideNavItem("Angebote", QuotesView.class, VaadinIcon.FILE_TEXT.create()));
-        nav.addItem(new SideNavItem("Aufträge", OrdersView.class, VaadinIcon.TASKS.create()));
-        nav.addItem(new SideNavItem("Partner", PartnersView.class, VaadinIcon.HANDSHAKE.create()));
+        nav.addItem(new SideNavItem("Projekte", OrdersView.class, VaadinIcon.TASKS.create()));
         nav.addItem(new SideNavItem("Rechnungen", InvoicesView.class, VaadinIcon.MONEY.create()));
-        nav.addItem(new SideNavItem("Eingangsrechnungen & Kosten", VendorInvoicesView.class, VaadinIcon.RECORDS.create()));
+        nav.addItem(
+                new SideNavItem("Eingangsrechnungen & Kosten", VendorInvoicesView.class, VaadinIcon.RECORDS.create()));
         nav.addItem(new SideNavItem("Preise & Tarife", PricingView.class, VaadinIcon.COINS.create()));
         nav.addItem(new SideNavItem("Einstellungen", SettingsView.class, VaadinIcon.COG.create()));
 

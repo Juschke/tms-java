@@ -23,6 +23,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.tabs.Tab;
@@ -74,15 +75,26 @@ public class PartnerDetailView extends VerticalLayout implements HasUrlParameter
 
         securityService.getAuthenticatedTenant().ifPresent(t -> this.tenant = t);
 
-        Button backButton = new Button("Zurück zur Liste", VaadinIcon.ARROW_LEFT.create(), e -> getUI().ifPresent(ui -> ui.navigate("partners")));
-        backButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-
-        HorizontalLayout header = new HorizontalLayout(backButton, title);
+        HorizontalLayout header = new HorizontalLayout(title);
+        header.setWidthFull();
+        header.expand(title);
         header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
         add(header);
 
         createTabs();
-        add(tabs, contentContainer);
+        add(tabs);
+
+        Button backButton = new Button("Zurück zur Liste", VaadinIcon.ARROW_LEFT.create(), e -> getUI().ifPresent(ui -> ui.navigate("partners")));
+        backButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+
+        HorizontalLayout buttonLayout = new HorizontalLayout(backButton);
+        buttonLayout.setWidthFull();
+        buttonLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.END);
+        buttonLayout.setPadding(false);
+        buttonLayout.setSpacing(true);
+        add(buttonLayout);
+
+        add(contentContainer);
         contentContainer.setSizeFull();
     }
 

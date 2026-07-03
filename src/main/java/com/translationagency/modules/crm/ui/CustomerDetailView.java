@@ -20,6 +20,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.tabs.Tab;
@@ -36,7 +37,7 @@ import java.util.UUID;
 
 @Route(value = "customers/detail", layout = MainLayout.class)
 @PageTitle("Kunde Details | Translation Management")
-@RolesAllowed({"ADMIN", "MANAGER", "CASE_WORKER"})
+@RolesAllowed({ "ADMIN", "MANAGER", "CASE_WORKER" })
 public class CustomerDetailView extends VerticalLayout implements HasUrlParameter<String> {
 
     private final CustomerService customerService;
@@ -55,7 +56,8 @@ public class CustomerDetailView extends VerticalLayout implements HasUrlParamete
     private VerticalLayout contactPersonsLayout;
     private DocumentAttachmentList documentsLayout;
 
-    public CustomerDetailView(CustomerService customerService, DocumentService documentService, SecurityService securityService) {
+    public CustomerDetailView(CustomerService customerService, DocumentService documentService,
+            SecurityService securityService) {
         this.customerService = customerService;
         this.documentService = documentService;
         this.securityService = securityService;
@@ -66,15 +68,27 @@ public class CustomerDetailView extends VerticalLayout implements HasUrlParamete
 
         securityService.getAuthenticatedTenant().ifPresent(t -> this.tenant = t);
 
-        Button backButton = new Button("Zurück zur Liste", VaadinIcon.ARROW_LEFT.create(), e -> getUI().ifPresent(ui -> ui.navigate("customers")));
-        backButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-
-        HorizontalLayout header = new HorizontalLayout(backButton, title);
+        HorizontalLayout header = new HorizontalLayout(title);
+        header.setWidthFull();
+        header.expand(title);
         header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
         add(header);
 
         createTabs();
-        add(tabs, contentContainer);
+        add(tabs);
+
+        Button backButton = new Button("Zurück zur Liste", VaadinIcon.ARROW_LEFT.create(),
+                e -> getUI().ifPresent(ui -> ui.navigate("customers")));
+        backButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+
+        HorizontalLayout buttonLayout = new HorizontalLayout(backButton);
+        buttonLayout.setWidthFull();
+        buttonLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.END);
+        buttonLayout.setPadding(false);
+        buttonLayout.setSpacing(true);
+        add(buttonLayout);
+
+        add(contentContainer);
         contentContainer.setSizeFull();
     }
 
@@ -148,7 +162,10 @@ public class CustomerDetailView extends VerticalLayout implements HasUrlParamete
         formLayout.add(customerNumber, companyName, vatId, leitwegId, street, zip, city, country);
 
         Binder<Customer> binder = new Binder<>(Customer.class);
-        binder.bindInstanceFields(formLayout);
+        binder.bind(customerNumber, Customer::getCustomerNumber, Customer::setCustomerNumber);
+        binder.forField(companyName).asRequired().bind(Customer::getCompanyName, Customer::setCompanyName);
+        binder.bind(vatId, Customer::getVatId, Customer::setVatId);
+        binder.bind(leitwegId, Customer::getLeitwegId, Customer::setLeitwegId);
         // Custom binding for nested Address fields if flat on object
         binder.bind(street, Customer::getBillingAddressStreet, Customer::setBillingAddressStreet);
         binder.bind(zip, Customer::getBillingAddressZip, Customer::setBillingAddressZip);
@@ -166,9 +183,11 @@ public class CustomerDetailView extends VerticalLayout implements HasUrlParamete
                 customer.setUpdatedBy(username);
                 customerService.saveCustomer(customer);
                 title.setText("Kunde: " + customer.getCompanyName());
-                Notification.show("Stammdaten erfolgreich aktualisiert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                Notification.show("Stammdaten erfolgreich aktualisiert")
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
             } catch (Exception ex) {
-                Notification.show("Fehler beim Speichern: " + ex.getMessage(), 5000, Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                Notification.show("Fehler beim Speichern: " + ex.getMessage(), 5000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
         });
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
@@ -195,12 +214,13 @@ public class CustomerDetailView extends VerticalLayout implements HasUrlParamete
                     "Ansprechpartner loeschen",
                     "Soll " + cp.getFullName() + " wirklich geloescht werden?",
                     () -> {
-                String username = securityService.getAuthenticatedUser()
-                        .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
-                        .orElse("system");
-                customerService.deleteContactPerson(cp.getId(), username);
-                Notification.show("Ansprechpartner gelöscht").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                grid.setItems(customerService.getContactPersons(customer.getId()));
+                        String username = securityService.getAuthenticatedUser()
+                                .map(org.springframework.security.core.userdetails.UserDetails::getUsername)
+                                .orElse("system");
+                        customerService.deleteContactPerson(cp.getId(), username);
+                        Notification.show("Ansprechpartner gelöscht")
+                                .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                        grid.setItems(customerService.getContactPersons(customer.getId()));
                     }));
             deleteButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
 
@@ -209,7 +229,8 @@ public class CustomerDetailView extends VerticalLayout implements HasUrlParamete
 
         grid.setItems(customerService.getContactPersons(customer.getId()));
 
-        Button addButton = new Button("Ansprechpartner hinzufügen", VaadinIcon.PLUS.create(), e -> openContactPersonDialog(new ContactPerson(), grid));
+        Button addButton = new Button("Ansprechpartner hinzufügen", VaadinIcon.PLUS.create(),
+                e -> openContactPersonDialog(new ContactPerson(), grid));
         addButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         contactPersonsLayout.add(addButton, grid);
@@ -222,13 +243,13 @@ public class CustomerDetailView extends VerticalLayout implements HasUrlParamete
                 tenant,
                 customer,
                 "CUSTOMER",
-                customer.getId()
-        );
+                customer.getId());
     }
 
     private void openContactPersonDialog(ContactPerson contactPerson, Grid<ContactPerson> grid) {
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle(contactPerson.getId() == null ? "Ansprechpartner hinzufügen" : "Ansprechpartner bearbeiten");
+        dialog.setHeaderTitle(
+                contactPerson.getId() == null ? "Ansprechpartner hinzufügen" : "Ansprechpartner bearbeiten");
 
         FormLayout formLayout = new FormLayout();
         TextField firstName = new TextField("Vorname");
@@ -239,9 +260,12 @@ public class CustomerDetailView extends VerticalLayout implements HasUrlParamete
         formLayout.add(firstName, lastName, email, phone);
 
         Binder<ContactPerson> binder = new Binder<>(ContactPerson.class);
-        binder.forField(firstName).asRequired("Vorname ist erforderlich").bind(ContactPerson::getFirstName, ContactPerson::setFirstName);
-        binder.forField(lastName).asRequired("Nachname ist erforderlich").bind(ContactPerson::getLastName, ContactPerson::setLastName);
-        binder.forField(email).asRequired("E-Mail ist erforderlich").bind(ContactPerson::getEmail, ContactPerson::setEmail);
+        binder.forField(firstName).asRequired("Vorname ist erforderlich").bind(ContactPerson::getFirstName,
+                ContactPerson::setFirstName);
+        binder.forField(lastName).asRequired("Nachname ist erforderlich").bind(ContactPerson::getLastName,
+                ContactPerson::setLastName);
+        binder.forField(email).asRequired("E-Mail ist erforderlich").bind(ContactPerson::getEmail,
+                ContactPerson::setEmail);
         binder.bind(phone, ContactPerson::getPhone, ContactPerson::setPhone);
 
         binder.readBean(contactPerson);
@@ -262,7 +286,8 @@ public class CustomerDetailView extends VerticalLayout implements HasUrlParamete
                 grid.setItems(customerService.getContactPersons(customer.getId()));
                 Notification.show("Ansprechpartner gespeichert").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
             } catch (Exception ex) {
-                Notification.show("Fehler beim Speichern: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                Notification.show("Fehler beim Speichern: " + ex.getMessage())
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
         });
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);

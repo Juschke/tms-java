@@ -77,7 +77,12 @@ public class PricingView extends VerticalLayout {
 
         H2 headerTitle = new H2("Tarif- & Preismanagement");
         headerTitle.addClassNames("m-0", "text-xl");
-        add(headerTitle);
+
+        HorizontalLayout header = new HorizontalLayout(headerTitle);
+        header.setWidthFull();
+        header.expand(headerTitle);
+        header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
+        add(header);
 
         createTabs();
         add(tabs, contentContainer);
